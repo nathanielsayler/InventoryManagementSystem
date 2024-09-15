@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="content-section">
+        <form method ="POST" action="" enctype = "multipart/form-data">
+            {{ form.hidden_tag() }}
+            <fieldset class ="form-group">
+                <legend class ="border-bottom mb-4">Modify Item Entry</legend>
+                <div class="form-group">
+                    {{ form.item_name.label(class="form-control-label") }}
+                    {{ form.item_name(class="form-control form-control=lg") }}
+
+                    {{ form.item_description.label(class="form-control-label") }}
+                    {{ form.item_description(class="form-control form-control=lg", style="height: 250px") }}
+
+                </div>
+            </fieldset>
+            <div class="form-group">
+                {{ form.submit(class="btn btn-outline-info", onclick="userFeedback()") }}
+                <script>
+                    function userFeedback() {
+                    const elem = document.getElementById("submit")
+                    elem.style.color = 'green'
+                    elem.value = 'Running...'
+                    document.getElementById("flashedmessage1").remove()
+                    }
+                </script>
+            </div>
+            <div class="form-group">
+                {{ form.delete_button(class="btn btn-outline-info", onclick="userFeedback2()", style = "color:red") }}
+                <script>
+                    function userFeedback2() {
+                    const elem = document.getElementById("delete_button")
+                    elem.style.color = 'red'
+                    elem.value = 'Deleting...'
+                    document.getElementById("flashedmessage1").remove()
+                    }
+                </script>
+            </div>
+        </form>
+    </div>
+{% endblock content %}
