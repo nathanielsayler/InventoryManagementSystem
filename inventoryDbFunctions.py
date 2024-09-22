@@ -49,8 +49,8 @@ def get_items(item_id=0):
 
 # Adds a new item to the items table
 def add_items(item):
-    inserted_item = {}
     conn = sqlite3.connect(db_file)
+    error_message = ''
     try:
         cur = conn.cursor()
         cur.execute("INSERT INTO ITEMS (item_name, item_description) VALUES (?, ?)", (item['item_name'], item['item_description']))
@@ -60,11 +60,12 @@ def add_items(item):
     except:
         print("Error encountered when trying to insert new item into database.")
         conn.rollback()
+        error_message = 'Error adding record to database.'
 
     finally:
         conn.close()
 
-    return inserted_item
+    return error_message
 
 
 # Updates existing item entry in items table
@@ -74,11 +75,11 @@ def update_items(item):
         conn = create_connection()
         cur = conn.cursor()
         cur.execute("update ITEMS SET item_name = ?, item_description = ? WHERE item_id = ?",
-                    (item["item_name"], item['item_description'],))
+                    (item["item_name"], item['item_description'], item['item_id']))
         conn.commit()
         conn.close()
-    except:
-        print("Error updating entry in items table")
+    except Exception as e:
+        print("Error updating entry in items table: ", e)
         conn.rollback()
         updated_item = {}
     finally:
@@ -143,6 +144,7 @@ def add_inventory(inventory_entry):
     inserted_item = {}
     print(inventory_entry)
     conn = sqlite3.connect(db_file)
+    error_message = ''
 
     try:
         cur = conn.cursor()
@@ -154,11 +156,12 @@ def add_inventory(inventory_entry):
     except:
         print("Error encountered when trying to insert new inventory entry into database.")
         conn.rollback()
+        error_message = 'Error adding record to database.'
 
     finally:
         conn.close()
 
-    return inserted_item
+    return error_message
 
 
 # Updates existing inventory entry in inventory table

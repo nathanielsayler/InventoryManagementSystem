@@ -25,21 +25,24 @@ posts = [
 
 # Class for search page. Contains a StringField for string user input, and a submit button to search
 class ModifyItem(FlaskForm):
-    item_name = StringField('Enter Name of New Item')
+    item_name = StringField('Enter Name of Item')
     item_description = TextAreaField('Enter Item Description')
     submit = SubmitField('Save')
     delete_button = SubmitField('Delete')
 
 
 class ModifyInventory(FlaskForm):
-    items = get_items()
-    print(items)
-    choices = [(entry['item_id'], entry['item_name']) for entry in items]
-    item_id = SelectField('Choose Item to Add Inventory:', choices=choices)
-    quantity = StringField('Enter Item Quantity')
-    location_string = StringField("Enter item locator string:")
+    item_id = SelectField('Choose Item to Add Inventory:', choices=[])
+    quantity = StringField('Item Quantity')
+    location_string = StringField("Item Locator String:")
     submit = SubmitField('Save')
     delete_button = SubmitField('Delete')
+
+    # Get the latest items from the items table
+    def __init__(self):
+        super(ModifyInventory, self).__init__()
+        items = get_items()
+        self.item_id.choices = [(entry['item_id'], entry['item_name']) for entry in items]
 
 
 # Function to validate user search input. Returns True for valid input, False otherwise.
@@ -49,6 +52,18 @@ def check_input(input):
         return True
     else:
         return False
+
+
+def verify_positive_integer(input):
+    try:
+        converted_int = int(input)
+        if converted_int > 0:
+            return 'Valid'
+        else:
+            return 'Invalid input: Quantity should be greater than 0'
+    except:
+        return 'Invalid input: Quantity should be an integer'
+
 
 
 # Landing page endpoint. Asks to enter an artist to search.
@@ -83,8 +98,16 @@ def new_item():
                     add_items(item)
 
                 return redirect(url_for('items_list'))  # Update to items_list when this is built
+
         elif form.delete_button.data:
+            # Checking if item has inventory associated. Item will not be deleted if associated with inventory
+            inventory = get_inventory()
+            for entry in inventory:
+                if entry['item_id'] == int(index):
+                    flash(f'Cannot delete item that has inventory allocated. Please delete inventory first.', 'danger')
+                    return render_template('modify_items.html', form=form)
             delete_item(index)
+            flash(f'Item Deleted', 'success')
             return redirect(url_for('items_list'))
 
 
@@ -115,21 +138,27 @@ def modify_inventory():
     if request.method == "POST":     # When submitting data
         if form.submit.data:    # If submit button is pressed
             if form.validate_on_submit():
-                flash(f'Updates Submitted', 'success')
-                inventory_entry = {}
-                inventory_entry['inventory_id'] = index
-                inventory_entry['item_id'] = int(form.item_id.data)
-                inventory_entry['quantity'] = int(form.quantity.data)
-                inventory_entry['location_string'] = form.location_string.data
+                quantity_check = verify_positive_integer(form.quantity.data)
+                if quantity_check == 'Valid':
+                    flash(f'Updates Submitted', 'success')
+                    inventory_entry = {}
+                    inventory_entry['inventory_id'] = index
+                    inventory_entry['item_id'] = int(form.item_id.data)
+                    inventory_entry['quantity'] = int(form.quantity.data)
+                    inventory_entry['location_string'] = form.location_string.data
+                else:
+                    flash(quantity_check, 'danger')
+                    return render_template('modify_inventory.html', form=form)
 
                 if int(index) != 0:     # If this is not a new item, use the update function
                     update_inventory(inventory_entry)
                 else:
-                    add_inventory(inventory_entry)
+                    add_inventory(inventory_entry)  # If this is a new item, use the add function
 
                 return redirect(url_for('inventory_list'))  # Update to items_list when this is built
         elif form.delete_button.data:
             delete_inventory(index)
+            flash(f'Inventory Deleted', 'success')
             return redirect(url_for('inventory_list'))
 
     else:   # When first rendering the page (method = GET)
@@ -142,11 +171,25 @@ def modify_inventory():
     return render_template('modify_inventory.html', form=form)
 
 
-# Logic for rendering list of inventory with modification link:
+# Logic for rendering list of inventory with modification link. Brings in latest item_name from the items table.
 @app.route("/inventory_list", methods=['GET', 'POST'])
 def inventory_list():
-    items = get_inventory()
-    return render_template('inventory_list.html', json_data=items)
+    inventory = get_inventory()     # Retrieving all data from inventory database
+    items = get_items()     # Retrieving all data from the items database
+
+    if len(inventory) > 0:  # Verifying there are entries in inventory table, else return blank list
+        df_inventory = pd.DataFrame(inventory)  # Converting inventory and Items to DataFrames to join
+        df_items = pd.DataFrame(items)
+
+        df_merge = pd.merge(df_inventory, df_items, how='inner', on='item_id')  # Joining to bring in item_name
+
+        df_merge = df_merge[['inventory_id', 'item_id', 'item_name', 'quantity', 'location_string']]    # Reducing to just necessary columns
+        json_output = df_merge.to_dict(orient='records')
+
+    else:
+        json_output = []
+
+    return render_template('inventory_list.html', json_data=json_output)
 
 
 if __name__ == '__main__':

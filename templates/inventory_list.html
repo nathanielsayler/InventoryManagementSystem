@@ -14,6 +14,7 @@
         <th style = "border:solid 1px;"> Inventory ID</th>
         <th style = "border:solid 1px;"> View/Modify</th>
         <th style = "border:solid 1px;"> Item ID</th>
+        <th style = "border:solid 1px;"> Item Name</th>
         <th style = "border:solid 1px;"> Quantity</th>
         <th style = "border:solid 1px;"> Location</th>
       </tr>
@@ -24,6 +25,7 @@
           <td style = "min-width: 100px; max-width:300px;">{{ entry.inventory_id }}</td>
           <td style = "min-width: 100px; max-width:300px;"><a href="{{ url_for('modify_inventory', index = entry.inventory_id) }}">Link</a></td>
           <td style = "min-width: 100px; max-width:300px;">{{ entry.item_id }}</td>
+          <td style = "min-width: 100px; max-width:300px;">{{ entry.item_name }}</td>
           <td style = "min-width: 100px; max-width:300px;">{{ entry.quantity }}</td>
           <td style = "min-width: 100px; max-width:300px;">{{ entry.location_string }}</td>
         </tr>
