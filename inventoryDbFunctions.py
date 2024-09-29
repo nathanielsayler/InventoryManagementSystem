@@ -5,12 +5,15 @@ import pathlib
 
 Default_Directory = pathlib.Path().absolute()
 Default_Directory = str(Default_Directory)
-global db_file
-db_file = Default_Directory+"\\db\\inventory.sqlite"
+prod_db_file = Default_Directory+"\\db\\inventory.sqlite"
 
 
 # Creates a connection to a SQLite database
-def create_connection():
+def create_connection(db_file=None):
+    if db_file:
+        print(db_file)
+    else:
+        db_file = prod_db_file
     conn2 = sqlite3.connect(db_file)
     return conn2
 
@@ -18,10 +21,10 @@ def create_connection():
 # Items Functions
 
 # function to return a specific item entry when key is passed, else return all items
-def get_items(item_id=0):
+def get_items(item_id=0, db_file=None):
     items = []
     try:
-        conn = create_connection()
+        conn = create_connection(db_file)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         if item_id == 0:
@@ -48,8 +51,8 @@ def get_items(item_id=0):
 
 
 # Adds a new item to the items table
-def add_items(item):
-    conn = sqlite3.connect(db_file)
+def add_items(item, db_file=None):
+    conn = create_connection(db_file)
     error_message = ''
     try:
         cur = conn.cursor()
@@ -58,7 +61,7 @@ def add_items(item):
         conn.close()
         #inserted_item = get_items(cur.lastrowid)
     except:
-        print("Error encountered when trying to insert new item into database.")
+        #print("Error encountered when trying to insert new item into database.")
         conn.rollback()
         error_message = 'Error adding record to database.'
 
@@ -69,10 +72,10 @@ def add_items(item):
 
 
 # Updates existing item entry in items table
-def update_items(item):
+def update_items(item, db_file=None):
     updated_item = {}
     try:
-        conn = create_connection()
+        conn = create_connection(db_file)
         cur = conn.cursor()
         cur.execute("update ITEMS SET item_name = ?, item_description = ? WHERE item_id = ?",
                     (item["item_name"], item['item_description'], item['item_id']))
@@ -89,10 +92,10 @@ def update_items(item):
 
 
 # deletes item from items table
-def delete_item(item_id):
+def delete_item(item_id, db_file=None):
     message = {}
     try:
-        conn = create_connection()
+        conn = create_connection(db_file)
         conn.execute("DELETE from ITEMS WHERE item_id = ?", (item_id,))
         conn.commit()
         conn.close()
@@ -109,10 +112,10 @@ def delete_item(item_id):
 # Inventory Functions
 
 # function to return a specific inventory entry when key is passed, else return all inventory entries
-def get_inventory(inventory_id=0):
+def get_inventory(inventory_id=0, db_file=None):
     inventory_entries = []
     try:
-        conn = create_connection()
+        conn = create_connection(db_file)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         if inventory_id == 0:
@@ -140,10 +143,10 @@ def get_inventory(inventory_id=0):
 
 
 # Adds a new entry to the inventory table
-def add_inventory(inventory_entry):
+def add_inventory(inventory_entry, db_file=None):
     inserted_item = {}
     print(inventory_entry)
-    conn = sqlite3.connect(db_file)
+    conn = create_connection(db_file)
     error_message = ''
 
     try:
@@ -154,7 +157,7 @@ def add_inventory(inventory_entry):
         conn.close()
         #inserted_item = get_items(cur.lastrowid)
     except:
-        print("Error encountered when trying to insert new inventory entry into database.")
+        #print("Error encountered when trying to insert new inventory entry into database.")
         conn.rollback()
         error_message = 'Error adding record to database.'
 
@@ -165,10 +168,10 @@ def add_inventory(inventory_entry):
 
 
 # Updates existing inventory entry in inventory table
-def update_inventory(inventory):
+def update_inventory(inventory, db_file=None):
     updated_inventory = {}
     try:
-        conn = create_connection()
+        conn = create_connection(db_file)
         cur = conn.cursor()
         cur.execute("update INVENTORY SET quantity = ?, item_id= ?, location_string = ?  WHERE inventory_id = ?",
                     (inventory["quantity"], inventory['item_id'], inventory['location_string'], inventory['inventory_id'],))
@@ -185,10 +188,10 @@ def update_inventory(inventory):
 
 
 # deletes inventory entry from inventory table
-def delete_inventory(inventory_id):
+def delete_inventory(inventory_id, db_file=None):
     message = {}
     try:
-        conn = create_connection()
+        conn = create_connection(db_file)
         conn.execute("DELETE from INVENTORY WHERE inventory_id = ?", (inventory_id,))
         conn.commit()
         conn.close()

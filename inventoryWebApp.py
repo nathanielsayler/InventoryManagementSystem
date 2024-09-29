@@ -74,6 +74,7 @@ def verify_positive_integer(input):
 def about():
     return render_template('about.html', title='About', posts=posts)
 
+
 @app.route("/new_item", methods=['GET', 'POST'])
 def new_item():
 
