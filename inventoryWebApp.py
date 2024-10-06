@@ -1,8 +1,10 @@
 import pandas as pd
-from flask import Flask, render_template, url_for, flash, redirect, request, json
+from flask import Flask, render_template, url_for, flash, redirect, request, json, send_file
 from flask_wtf import FlaskForm
 from wtforms import SubmitField, StringField, TextAreaField, SelectField
 import re
+from io import BytesIO
+from datetime import datetime
 
 from inventoryDbFunctions import get_items, add_items, delete_item, update_items
 from inventoryDbFunctions import get_inventory, add_inventory, delete_inventory, update_inventory
@@ -191,6 +193,35 @@ def inventory_list():
         json_output = []
 
     return render_template('inventory_list.html', json_data=json_output)
+
+
+@app.route("/download_inventory_csv")
+def download_inventory_csv():
+    inventory = get_inventory()  # Retrieving all data from inventory database
+    items = get_items()  # Retrieving all data from the items database
+
+    if len(inventory) > 0:  # Verifying there are entries in inventory table, else return blank list
+        df_inventory = pd.DataFrame(inventory)  # Converting inventory and Items to DataFrames to join
+        df_items = pd.DataFrame(items)
+
+        df_merge = pd.merge(df_inventory, df_items, how='inner', on='item_id')  # Joining to bring in item_name
+
+        df_merge = df_merge[['inventory_id', 'item_id', 'item_name', 'quantity',
+                             'location_string']]  # Reducing to just necessary columns
+
+        # Creating an in-memory .csv
+        output = BytesIO()
+        df_merge.to_csv(output, index=False)
+        output.seek(0)
+
+        # Getting today's date and time and appending to file name
+        time_string = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        output_filename = f'inventory_download_{time_string}.csv'
+
+        return send_file(output,
+                         mimetype='text/csv',
+                         as_attachment=True,
+                         download_name=output_filename)
 
 
 if __name__ == '__main__':
