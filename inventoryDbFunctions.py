@@ -54,12 +54,15 @@ def get_items(item_id=0, db_file=None):
 def add_items(item, db_file=None):
     conn = create_connection(db_file)
     error_message = ''
+    new_id = ''
     try:
         cur = conn.cursor()
-        cur.execute("INSERT INTO ITEMS (item_name, item_description) VALUES (?, ?)", (item['item_name'], item['item_description']))
+        cur.execute("INSERT INTO ITEMS (item_name, item_description) VALUES (?, ?)",
+                    (item['item_name'], item['item_description']))
+
+        new_id = str(cur.lastrowid)
         conn.commit()
         conn.close()
-        #inserted_item = get_items(cur.lastrowid)
     except:
         #print("Error encountered when trying to insert new item into database.")
         conn.rollback()
@@ -68,7 +71,7 @@ def add_items(item, db_file=None):
     finally:
         conn.close()
 
-    return error_message
+    return [error_message, new_id]
 
 
 # Updates existing item entry in items table
@@ -193,6 +196,102 @@ def delete_inventory(inventory_id, db_file=None):
     try:
         conn = create_connection(db_file)
         conn.execute("DELETE from INVENTORY WHERE inventory_id = ?", (inventory_id,))
+        conn.commit()
+        conn.close()
+        message["status"] = "Item deleted successfully"
+    except:
+        conn.rollback()
+        message["status"] = "Could not delete item"
+    finally:
+        conn.close()
+
+    return message
+
+
+# Retrieve all the listings from the listings table
+def get_listings(inventory_id=0, db_file=None):
+    listing_entries = []
+    try:
+        conn = create_connection(db_file)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        if inventory_id == 0:
+            cur.execute("SELECT * FROM LISTINGS")
+        else:
+            id_str = str(inventory_id)
+            cur.execute("SELECT * FROM LISTINGS WHERE listing_id = " + id_str)
+        rows = cur.fetchall()
+
+        # convert row objects to dictionary
+        for i in rows:
+            listing_entry = {}
+            listing_entry["listing_id"] = i["listing_id"]
+            listing_entry["item_id"] = i["item_id"]
+            listing_entry["quantity"] = i["quantity"]
+            listing_entry["website"] = i["website"]
+            listing_entry["listing_url"] = i["listing_url"]
+            listing_entry["listing_status"] = i["listing_status"]
+            listing_entries.append(listing_entry)
+
+        conn.close()
+
+    except:
+        print("Error in get_listings function")
+
+    return listing_entries
+
+
+# Adds a new entry to the listings table
+def add_listing(listing_entry, db_file=None):
+    inserted_listing = {}
+    print(listing_entry)
+    conn = create_connection(db_file)
+    error_message = ''
+
+    try:
+        cur = conn.cursor()
+        cur.execute("INSERT INTO LISTINGS (item_id, quantity, website, listing_url, listing_status) VALUES (?, ?, ?, ?, ?)", (listing_entry['item_id'], listing_entry['quantity'], listing_entry['website'], listing_entry['listing_url'], listing_entry['listing_status']))
+        conn.commit()
+        conn.close()
+        #inserted_item = get_items(cur.lastrowid)
+    except:
+        #print("Error encountered when trying to insert new inventory entry into database.")
+        conn.rollback()
+        error_message = 'Error adding record to database.'
+
+    finally:
+        conn.close()
+
+    return error_message
+
+
+# Updates existing listing entry in listings table
+def update_listing(listing, db_file=None):
+    updated_listing = {}
+    print(listing)
+    try:
+        conn = create_connection(db_file)
+        cur = conn.cursor()
+        cur.execute("update LISTINGS SET item_id = ?, quantity = ?, website = ?, listing_url = ?, listing_status = ? WHERE listing_id = ?",
+                    (listing["item_id"], listing["quantity"], listing['website'], listing['listing_url'], listing['listing_status'], listing['listing_id'],))
+        conn.commit()
+        conn.close()
+    except:
+        print("Error updating entry in listings table")
+        conn.rollback()
+        updated_listing = {}
+    finally:
+        conn.close()
+
+    return updated_listing
+
+
+# deletes inventory entry from inventory table
+def delete_listing(listing_id, db_file=None):
+    message = {}
+    try:
+        conn = create_connection(db_file)
+        conn.execute("DELETE from LISTINGS WHERE listing_id = ?", (listing_id,))
         conn.commit()
         conn.close()
         message["status"] = "Item deleted successfully"

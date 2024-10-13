@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<body>
+  <h1> Manage Listings</h1>
+  <table border = "1">
+    <style>
+      table {border-collapse:collapse; table-layout:auto; border:solid 1px;}
+      table td {border:solid 1px; word-wrap:break-word; min-width:200px; max-width:500px;}
+    </style>
+    <thread>
+      <tr>
+        <th style = "border:solid 1px;"> Listing ID</th>
+        <th style = "border:solid 1px;"> View/Modify</th>
+        <th style = "border:solid 1px;"> Item Name</th>
+        <th style = "border:solid 1px;"> Quantity</th>
+        <th style = "border:solid 1px;"> Website</th>
+        <th style = "border:solid 1px;"> URL</th>
+        <th style = "border:solid 1px;"> Status</th>
+      </tr>
+    </thread>
+    <tbody>
+      {% for entry in json_data %}
+        <tr>
+          <td style = "min-width: 100px; max-width:300px;">{{ entry.listing_id }}</td>
+          <td style = "min-width: 100px; max-width:300px;"><a href="{{ url_for('modify_listing', index = entry.listing_id) }}">Link</a></td>
+          <td style = "min-width: 100px; max-width:300px;">{{ entry.item_name }}</td>
+          <td style = "min-width: 100px; max-width:300px;">{{ entry.quantity }}</td>
+          <td style = "min-width: 100px; max-width:300px;">{{ entry.website }}</td>
+          <td style = "min-width: 100px; max-width:300px;">{{ entry.listing_url }}</td>
+          <td style = "min-width: 100px; max-width:300px;">{{ entry.listing_status }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+{% endblock %}

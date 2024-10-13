@@ -38,7 +38,7 @@ class TestAddItems(unittest.TestCase):
 
     def test_add_item_valid(self):
         item = {'item_name': 'Test 1 Item', 'item_description': 'Test 1 Description'}
-        error_message = add_items(item, db_file=db_file_test)
+        error_message = add_items(item, db_file=db_file_test)[0]
 
         self.cur.execute("SELECT * FROM items WHERE item_name = ? AND item_description = ?",
                          (item['item_name'], item['item_description']))
@@ -53,7 +53,7 @@ class TestAddItems(unittest.TestCase):
         self.cur.execute("SELECT COUNT(*) FROM items")  # getting record count before insert
         count1 = self.cur.fetchone()[0]
 
-        error_message = add_items(item, db_file=db_file_test)   # Executing function
+        error_message = add_items(item, db_file=db_file_test)[0]   # Executing function
 
         self.cur.execute("SELECT COUNT(*) FROM items")
         count2 = self.cur.fetchone()[0]
@@ -68,7 +68,7 @@ class TestAddItems(unittest.TestCase):
         self.cur.execute("SELECT COUNT(*) FROM items")  # getting record count before insert
         count1 = self.cur.fetchone()[0]
 
-        error_message = add_items(item, db_file=db_file_test)  # Executing function
+        error_message = add_items(item, db_file=db_file_test)[0]  # Executing function
 
         self.cur.execute("SELECT COUNT(*) FROM items")
         count2 = self.cur.fetchone()[0]

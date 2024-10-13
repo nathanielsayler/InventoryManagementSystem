@@ -4,29 +4,22 @@
         <form method ="POST" action="" enctype = "multipart/form-data">
             {{ form.hidden_tag() }}
             <fieldset class ="form-group">
-                <legend class ="border-bottom mb-4">Modify Item Entry</legend>
+                <legend class ="border-bottom mb-4">Modify Listing Entry</legend>
                 <div class="form-group">
-                    {{ form.item_name.label(class="form-control-label") }}
-                    {{ form.item_name(class="form-control form-control=lg") }}
+                    {{ form.item_id.label(class="form-control-label") }}
+                    {{ form.item_id(class="form-control form-control=lg") }}
 
-                    {{ form.item_description.label(class="form-control-label") }}
-                    {{ form.item_description(class="form-control form-control=lg", style="height: 250px") }}
+                    {{ form.quantity.label(class="form-control-label") }}
+                    {{ form.quantity(class="form-control form-control=lg") }}
 
-                    <p>
-                        {{ form.item_photo.label }} <br>
-                        {{ form.item_photo() }}
-                    </p>
+                    {{ form.website.label(class="form-control-label") }}
+                    {{ form.website(class="form-control form-control=lg") }}
 
-                    {% if image_files %}
-                        <h2>Current Image(s)</h2>
-                        <div>
-                            {% for file in image_files %}
-                                <img src="{{ url_for('uploaded_file', index=index, filename=file) }}"
-                                     alt="Item Image" width="300">
-                                <button type="submit" name="delete_image" value="{{ file }}">Delete Image</button>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    {{ form.listing_url.label(class="form-control-label") }}
+                    {{ form.listing_url(class="form-control form-control=lg") }}
+
+                    {{ form.listing_status.label(class="form-control-label") }}
+                    {{ form.listing_status(class="form-control form-control=lg") }}
 
                 </div>
             </fieldset>
