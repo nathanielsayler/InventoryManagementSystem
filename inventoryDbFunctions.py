@@ -209,16 +209,16 @@ def delete_inventory(inventory_id, db_file=None):
 
 
 # Retrieve all the listings from the listings table
-def get_listings(inventory_id=0, db_file=None):
+def get_listings(listing_id=0, db_file=None):
     listing_entries = []
     try:
         conn = create_connection(db_file)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        if inventory_id == 0:
+        if listing_id == 0:
             cur.execute("SELECT * FROM LISTINGS")
         else:
-            id_str = str(inventory_id)
+            id_str = str(listing_id)
             cur.execute("SELECT * FROM LISTINGS WHERE listing_id = " + id_str)
         rows = cur.fetchall()
 

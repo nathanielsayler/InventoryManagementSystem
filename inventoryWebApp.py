@@ -249,7 +249,11 @@ def download_inventory_csv():
     inventory = get_inventory()  # Retrieving all data from inventory database
     items = get_items()  # Retrieving all data from the items database
 
-    if len(inventory) > 0:  # Verifying there are entries in inventory table, else return blank list
+
+    if len(inventory) == 0 or len(items) == 0:  # Verifying there are entries in inventory table, else return blank list
+        df_merge = pd.DataFrame(columns=['inventory_id', 'item_id', 'item_name', 'quantity', 'location_string'])
+
+    else:
         df_inventory = pd.DataFrame(inventory)  # Converting inventory and Items to DataFrames to join
         df_items = pd.DataFrame(items)
 
@@ -258,19 +262,19 @@ def download_inventory_csv():
         df_merge = df_merge[['inventory_id', 'item_id', 'item_name', 'quantity',
                              'location_string']]  # Reducing to just necessary columns
 
-        # Creating an in-memory .csv
-        output = BytesIO()
-        df_merge.to_csv(output, index=False)
-        output.seek(0)
+    # Creating an in-memory .csv
+    output = BytesIO()
+    df_merge.to_csv(output, index=False)
+    output.seek(0)
 
-        # Getting today's date and time and appending to file name
-        time_string = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        output_filename = f'inventory_download_{time_string}.csv'
+    # Getting today's date and time and appending to file name
+    time_string = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    output_filename = f'inventory_download_{time_string}.csv'
 
-        return send_file(output,
-                         mimetype='text/csv',
-                         as_attachment=True,
-                         download_name=output_filename)
+    return send_file(output,
+                     mimetype='text/csv',
+                     as_attachment=True,
+                     download_name=output_filename)
 
 
 @app.route("/uploads/<index>/<filename>")
@@ -335,7 +339,7 @@ def modify_listing():
 
                 return redirect(url_for('manage_listings'))  # Update to items_list when this is built
         elif form.delete_button.data:
-            delete_inventory(index)
+            delete_listing(index)
             flash(f'Inventory Deleted', 'success')
             return redirect(url_for('manage_listings'))
 
