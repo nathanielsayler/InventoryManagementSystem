@@ -55,6 +55,17 @@
               </ul>
             </p>
           </div>
+          <div class="content-section">
+            <h3>Reports</h3>
+            <p class='text-muted'>Choose Option Below:
+              <ul class="list-group" style="list-style: none;">
+                <li><a class="list-group-item list-group-item-light" style="color: blue;" href="{{ url_for('profit_report') }}">Profit Report</a>
+                    <a class="list-group-item list-group-item-light" style="color: blue;" href="{{ url_for('inventory_report') }}">Inventory Report</a>
+                    <a class="list-group-item list-group-item-light" style="color: blue;" href="{{ url_for('inventory_forecast', index = 0) }}">Inventory Forecast</a>
+                </li>
+              </ul>
+            </p>
+          </div>
         </div>
         <div class="col-md-8">
           {% with messages = get_flashed_messages(with_categories=true) %}

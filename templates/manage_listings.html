@@ -18,6 +18,7 @@
         <th style = "border:solid 1px;"> Website</th>
         <th style = "border:solid 1px;"> URL</th>
         <th style = "border:solid 1px;"> Status</th>
+        <th style = "border:solid 1px;"> Record Sale</th>
       </tr>
     </thread>
     <tbody>
@@ -30,6 +31,7 @@
           <td style = "min-width: 100px; max-width:300px;">{{ entry.website }}</td>
           <td style = "min-width: 100px; max-width:300px;">{{ entry.listing_url }}</td>
           <td style = "min-width: 100px; max-width:300px;">{{ entry.listing_status }}</td>
+          <td style = "min-width: 100px; max-width:300px;"><a href="{{ url_for('record_sale', index = entry.listing_id) }}">Link</a></td>
         </tr>
       {% endfor %}
     </tbody>

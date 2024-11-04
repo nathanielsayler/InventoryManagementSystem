@@ -3,7 +3,8 @@ from flask import Flask, render_template, url_for, flash, redirect, request, jso
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
 from werkzeug.utils import secure_filename
-from wtforms import SubmitField, StringField, TextAreaField, SelectField
+from wtforms import SubmitField, StringField, TextAreaField, SelectField, DecimalField
+from wtforms.validators import DataRequired
 import re
 from io import BytesIO
 from datetime import datetime
@@ -12,6 +13,7 @@ import os
 from inventoryDbFunctions import get_items, add_items, delete_item, update_items
 from inventoryDbFunctions import get_inventory, add_inventory, delete_inventory, update_inventory
 from inventoryDbFunctions import get_listings, add_listing, delete_listing, update_listing
+from inventoryDbFunctions import record_sale_in_db
 
 # This .py file contains code to run web application. Renders all .html pages through Flask, flask_wtf, and wtforms packages.
 
@@ -44,6 +46,7 @@ class ModifyInventory(FlaskForm):
     item_id = SelectField('Choose Item to Add Inventory:', choices=[])
     quantity = StringField('Item Quantity')
     location_string = StringField("Item Locator String:")
+    unit_price = DecimalField('Unit Cost Per Item:', places=2, rounding=None, validators=[DataRequired()])
     submit = SubmitField('Save')
     delete_button = SubmitField('Delete')
 
@@ -61,6 +64,7 @@ class ModifyListing(FlaskForm):
     website = SelectField('Choose website listed on', choices=[('', ''), ('Etsy', 'Etsy'), ('Amazon', 'Amazon'), ('Ebay','Ebay')])
     listing_status = SelectField('Listing Status', choices=[('active', 'active'), ('sold','sold'), ('inactive', 'inactive')])
     listing_url = StringField('Paste url of listing below')
+    unit_price = DecimalField('Listing Price Per Item:', places=2, rounding=None, validators=[DataRequired()])
     submit = SubmitField('Save')
     delete_button = SubmitField('Delete')
 
@@ -69,6 +73,11 @@ class ModifyListing(FlaskForm):
         super(ModifyListing, self).__init__()
         items = get_items()
         self.item_id.choices = [('','')] + [(entry['item_id'], entry['item_name']) for entry in items]
+
+
+class RecordSale(FlaskForm):
+    quantity = StringField('Quantity Sold')
+    submit = SubmitField('Save')
 
 
 
@@ -197,6 +206,7 @@ def modify_inventory():
                     inventory_entry['inventory_id'] = index
                     inventory_entry['item_id'] = int(form.item_id.data)
                     inventory_entry['quantity'] = int(form.quantity.data)
+                    inventory_entry['unit_price'] = float(form.unit_price.data)
                     inventory_entry['location_string'] = form.location_string.data
                 else:
                     flash(quantity_check, 'danger')
@@ -215,10 +225,10 @@ def modify_inventory():
 
     else:   # When first rendering the page (method = GET)
         if int(index) != 0:     #pre-populates the data if existing item is being modified
-            print(default_vals)
             form.item_id.data = str(default_vals[0]['item_id'])
             form.location_string.data = default_vals[0]['location_string']
             form.quantity.data = default_vals[0]['quantity']
+            form.unit_price.data = default_vals[0]['unit_price']
 
     return render_template('modify_inventory.html', form=form)
 
@@ -285,9 +295,7 @@ def uploaded_file(filename, index):
 @app.route("/manage_listings")
 def manage_listings():
     listings = get_listings()     # Retrieving all data from inventory database
-    print(listings)
     items = get_items()     # Retrieving all data from the items database
-    print(items)
 
     if len(listings) > 0:  # Verifying there are entries in inventory table, else return blank list
         df_listings = pd.DataFrame(listings)  # Converting inventory and Items to DataFrames to join
@@ -297,7 +305,6 @@ def manage_listings():
 
         df_merge = df_merge[['listing_id', 'item_id', 'item_name', 'quantity', 'website', 'listing_url', 'listing_status']]    # Reducing to just necessary columns
         json_output = df_merge.to_dict(orient='records')
-        print(json_output)
 
     else:
         json_output = []
@@ -326,6 +333,7 @@ def modify_listing():
                     listing_entry['website'] = form.website.data
                     listing_entry['listing_status'] = form.listing_status.data
                     listing_entry['listing_url'] = form.listing_url.data
+                    listing_entry['unit_price'] = float(form.unit_price.data)
 
                 else:
                     flash(quantity_check, 'danger')
@@ -335,7 +343,6 @@ def modify_listing():
                     update_listing(listing_entry)
                 else:
                     add_listing(listing_entry)  # If this is a new item, use the add function
-                    print(listing_entry)
 
                 return redirect(url_for('manage_listings'))  # Update to items_list when this is built
         elif form.delete_button.data:
@@ -345,14 +352,48 @@ def modify_listing():
 
     else:   # When first rendering the page (method = GET)
         if int(index) != 0:     #pre-populates the data if existing item is being modified
-            print(default_vals)
             form.item_id.data = str(default_vals[0]['item_id'])
             form.quantity.data = default_vals[0]['quantity']
             form.website.data = default_vals[0]['website']
             form.listing_status.data = default_vals[0]['listing_status']
             form.listing_url.data = default_vals[0]['listing_url']
+            form.unit_price.data = default_vals[0]['unit_price']
 
     return render_template('modify_listing.html', form=form)
+
+
+@app.route("/record_sale", methods=['GET', 'POST'])
+def record_sale():
+    form = RecordSale()
+    index = request.args['index']
+    listings = get_listings(index)     # Retrieving listing from database
+
+    if request.method == "POST":     # When submitting data
+        if form.submit.data:    # If submit button is pressed
+            if int(form.quantity.data) > listings[0]['quantity']:
+                flash('Quantity cannot exceed listing quantity', 'danger')
+                return render_template('record_sale.html', form=form)
+            else:
+                record_sale_in_db(listings[0], form.quantity.data)
+                return redirect(url_for('manage_listings'))
+
+    return render_template('record_sale.html', form=form)
+
+
+@app.route("/profit_report", methods=['GET', 'POST'])
+def profit_report():
+    return render_template('profit_report.html')
+
+
+@app.route("/inventory_report", methods=['GET', 'POST'])
+def inventory_report():
+    return render_template('inventory_report.html')
+
+
+@app.route("/inventory_forecast", methods=['GET', 'POST'])
+def inventory_forecast():
+    return render_template('inventory_forecast.html')
+
 
 
 if __name__ == '__main__':

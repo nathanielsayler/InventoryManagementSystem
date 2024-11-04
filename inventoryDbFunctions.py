@@ -2,6 +2,7 @@
 
 import sqlite3
 import pathlib
+from datetime import datetime
 
 Default_Directory = pathlib.Path().absolute()
 Default_Directory = str(Default_Directory)
@@ -135,6 +136,7 @@ def get_inventory(inventory_id=0, db_file=None):
             inventory_entry["quantity"] = i["quantity"]
             inventory_entry["item_id"] = i["item_id"]
             inventory_entry["location_string"] = i["location_string"]
+            inventory_entry['unit_price'] = i["unit_price"]
             inventory_entries.append(inventory_entry)
 
         conn.close()
@@ -151,21 +153,37 @@ def add_inventory(inventory_entry, db_file=None):
     print(inventory_entry)
     conn = create_connection(db_file)
     error_message = ''
+    inventory = get_inventory()
+    filtered_inventory = [entry for entry in inventory if entry.get('location_string') == inventory_entry['location_string']]
+    filtered_inventory = [entry for entry in filtered_inventory if entry.get('item_id') == inventory_entry['item_id']]
+    print(filtered_inventory)
 
-    try:
-        cur = conn.cursor()
-        print(inventory_entry)
-        cur.execute("INSERT INTO INVENTORY (quantity, item_id, location_string) VALUES (?, ?, ?)", (inventory_entry['quantity'], inventory_entry['item_id'], inventory_entry['location_string']))
-        conn.commit()
-        conn.close()
-        #inserted_item = get_items(cur.lastrowid)
-    except:
-        #print("Error encountered when trying to insert new inventory entry into database.")
-        conn.rollback()
-        error_message = 'Error adding record to database.'
+    # Logic for "netting". If inventory entry exists, add the new entry to that and recalculate avg cost
+    if len(filtered_inventory) > 0:
+        filtered_inventory.append(inventory_entry)
+        total_quantity = sum(entry['quantity'] for entry in filtered_inventory)
+        avg_cost = sum(entry['unit_price'] * entry['quantity'] for entry in filtered_inventory) / total_quantity
+        final_record = filtered_inventory[0]
+        final_record['unit_price'] = round(avg_cost, 2)
+        final_record['quantity'] = total_quantity
+        update_inventory(final_record)
 
-    finally:
-        conn.close()
+    else:
+        try:
+            cur = conn.cursor()
+            print(inventory_entry)
+            cur.execute("INSERT INTO INVENTORY (quantity, item_id, location_string, unit_price) VALUES (?, ?, ?, ?)", (inventory_entry['quantity'], inventory_entry['item_id'], inventory_entry['location_string'], inventory_entry['unit_price']))
+            conn.commit()
+            conn.close()
+            #inserted_item = get_items(cur.lastrowid)
+        except Exception as e:
+            #print("Error encountered when trying to insert new inventory entry into database.")
+            conn.rollback()
+            error_message = 'Error adding record to database.'
+            print(e)
+
+        finally:
+            conn.close()
 
     return error_message
 
@@ -176,8 +194,8 @@ def update_inventory(inventory, db_file=None):
     try:
         conn = create_connection(db_file)
         cur = conn.cursor()
-        cur.execute("update INVENTORY SET quantity = ?, item_id= ?, location_string = ?  WHERE inventory_id = ?",
-                    (inventory["quantity"], inventory['item_id'], inventory['location_string'], inventory['inventory_id'],))
+        cur.execute("update INVENTORY SET quantity = ?, item_id= ?, location_string = ?, unit_price = ?  WHERE inventory_id = ?",
+                    (inventory["quantity"], inventory['item_id'], inventory['location_string'], inventory['unit_price'], inventory['inventory_id'],))
         conn.commit()
         conn.close()
     except:
@@ -231,6 +249,7 @@ def get_listings(listing_id=0, db_file=None):
             listing_entry["website"] = i["website"]
             listing_entry["listing_url"] = i["listing_url"]
             listing_entry["listing_status"] = i["listing_status"]
+            listing_entry["unit_price"] = i["unit_price"]
             listing_entries.append(listing_entry)
 
         conn.close()
@@ -250,7 +269,7 @@ def add_listing(listing_entry, db_file=None):
 
     try:
         cur = conn.cursor()
-        cur.execute("INSERT INTO LISTINGS (item_id, quantity, website, listing_url, listing_status) VALUES (?, ?, ?, ?, ?)", (listing_entry['item_id'], listing_entry['quantity'], listing_entry['website'], listing_entry['listing_url'], listing_entry['listing_status']))
+        cur.execute("INSERT INTO LISTINGS (item_id, quantity, website, listing_url, listing_status, unit_price) VALUES (?, ?, ?, ?, ?, ?)", (listing_entry['item_id'], listing_entry['quantity'], listing_entry['website'], listing_entry['listing_url'], listing_entry['listing_status'], listing_entry['unit_price']))
         conn.commit()
         conn.close()
         #inserted_item = get_items(cur.lastrowid)
@@ -272,8 +291,8 @@ def update_listing(listing, db_file=None):
     try:
         conn = create_connection(db_file)
         cur = conn.cursor()
-        cur.execute("update LISTINGS SET item_id = ?, quantity = ?, website = ?, listing_url = ?, listing_status = ? WHERE listing_id = ?",
-                    (listing["item_id"], listing["quantity"], listing['website'], listing['listing_url'], listing['listing_status'], listing['listing_id'],))
+        cur.execute("update LISTINGS SET item_id = ?, quantity = ?, website = ?, listing_url = ?, listing_status = ?, unit_price = ? WHERE listing_id = ?",
+                    (listing["item_id"], listing["quantity"], listing['website'], listing['listing_url'], listing['listing_status'], listing['unit_price'], listing['listing_id'],))
         conn.commit()
         conn.close()
     except:
@@ -302,4 +321,49 @@ def delete_listing(listing_id, db_file=None):
         conn.close()
 
     return message
+
+
+# This function updates the listing status and quantity when an item is marked as sold. It also records the sale.
+def record_sale_in_db(listing, quantity):
+    if listing['quantity'] == int(quantity):
+        listing['listing_status'] = 'sold'
+
+    listing['quantity'] = listing['quantity'] - int(quantity)   # Setting new quantity
+    update_listing(listing)
+
+    # Creating Sales record
+    record = {}
+    record['quantity'] = quantity
+    record['item_id'] = listing['item_id']
+    record['sale_price'] = listing['unit_price']
+    record['date_sold'] = datetime.today().strftime("%m-%d-%Y")
+
+    inventory = get_inventory()
+    filtered_inventory = [entry for entry in inventory if entry.get('item_id') == listing['item_id']]
+    if len(filtered_inventory) == 0:
+        record['acquisition_cost'] = 0
+    else:
+        record['acquisition_cost'] = filtered_inventory[0]['unit_price']
+
+    # Writing Sales record to db
+    conn = create_connection(None)
+    error_message = ''
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO SALES (item_id, quantity, sale_price, acquisition_cost, date_sold) VALUES (?, ?, ?, ?, ?)",
+            (record['item_id'], record['quantity'], record['sale_price'],
+             record['acquisition_cost'], record['date_sold']))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(e)
+        conn.rollback()
+        error_message = 'Error adding record to database.'
+
+    finally:
+        conn.close()
+
+    print(record)
+
 
