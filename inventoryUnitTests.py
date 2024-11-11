@@ -4,11 +4,13 @@ import pathlib
 from inventoryWebApp import app
 from unittest.mock import patch, MagicMock
 from io import BytesIO
+import pandas as pd
 from flask import url_for
 import os
 
 
 from inventoryDbFunctions import create_connection, add_items, get_items, add_inventory, get_inventory, get_listings
+from sarimaModelPredict import generate_profit_report, generate_inventory_history, create_forecast_plot_html
 
 Default_Directory = pathlib.Path().absolute()
 Default_Directory = str(Default_Directory)
@@ -502,6 +504,92 @@ class TestGetListings(unittest.TestCase):
         # Testing case with query that should return 0 records
         listing = get_listings(-1, db_file=db_file_test)
         self.assertEqual(listing, [], "Records were returned. This test should return an empty list because no id is -1.")
+
+
+# Testing generation of Profit Report
+class TestProfitReport(unittest.TestCase):
+
+    def test_generate_profit_report(self):
+        #Create mocked data to simulate input
+        synthetic_data = [
+            {'date_sold': '01-15-2023', 'quantity': 10, 'sale_price': 20, 'acquisition_cost': 15},
+            {'date_sold': '02-15-2023', 'quantity': 5, 'sale_price': 25, 'acquisition_cost': 10},
+            {'date_sold': '03-15-2023', 'quantity': 20, 'sale_price': 30, 'acquisition_cost': 20}
+        ]
+
+        #Call the generate_profit_report function with mocked data
+        report_html = generate_profit_report(synthetic_data)
+
+        #Verify chart labels in the HTML output
+        self.assertIn('"title":{"text":"Monthly Profit"}', report_html, "Missing 'Monthly Profit' title.")
+        self.assertIn('"title":{"text":"Monthly Margin"}', report_html, "Missing 'Monthly Margin' title.")
+
+
+        self.assertIn('"y":[50,75,200],"type":"bar"', report_html, "Missing profit value(s).")
+        self.assertIn('"y":[25.0,60.0,33.33333333333333],"type":"scatter"', report_html, "Missing margin value(s).")
+
+
+class TestInventoryHistoryReport(unittest.TestCase):
+
+    def test_generate_inventory_history(self):
+        #Create synthetic data to simulate input
+        current_inventory = [
+            {'quantity': 123456543},
+        ]
+        inventory_history = [
+            {'date': '2023-01-15', 'qty_change': 10},
+            {'date': '2023-02-15', 'qty_change': -5},
+            {'date': '2023-03-15', 'qty_change': 20},
+        ]
+
+        #Call the generate_inventory_history function with synthetic data
+        report_html = generate_inventory_history(current_inventory, inventory_history)
+
+        #Verify chart labels in the HTML output
+        self.assertIn('"title":{"text":"Monthly Inventory Levels"}', report_html,
+                      "Missing 'Monthly Inventory Levels' title.")
+        self.assertIn('"yaxis":{"title":{"text":"Inventory Level"}}', report_html, "Missing 'Inventory Level' title.")
+
+        #Check that expected inventory levels appear in the HTML
+        self.assertIn('"y":[123456523,123456528,123456518],"type":"bar"}],', report_html,"Inventory values did not match expected output")
+
+
+class TestInventoryForecastReport(unittest.TestCase):
+
+    def test_create_forecast_plot_html(self):
+        #Load synthetic data from CSV file
+        data_input_df = pd.read_csv("SARIMA_Demo_Item.csv")
+        data_input_df['quantity'] = data_input_df['qty_sold']
+        data_input_df['date_sold'] = pd.to_datetime(data_input_df['date_sold'], format='%m/%d/%Y').dt.strftime('%m-%d-%Y')
+
+        data_input = data_input_df.to_dict(orient="records")
+
+        #Call the create_forecast_plot_html function with the data from CSV
+        report_html = create_forecast_plot_html(data_input)
+        with open("report_html_output.txt", "w", encoding="utf-8") as file:
+            file.write(repr(report_html))
+
+        #Verify chart labels in the HTML output
+        self.assertIn('"title":{"text":"Sales Forecast using SARIMA Model with Yearly Seasonality"}', report_html,
+                      "Matching title not found in generated report.")
+        self.assertIn('"yaxis":{"title":{"text":"Quantity Sold"}}', report_html, "Matching y-axis title 'Quantity Sold' not found in generated report.")
+
+        #Verify the presence of future dates in the forecast
+        #Use the expected last date in the historical data and confirm forecast dates extend beyond it
+        historical_data = pd.DataFrame(data_input)
+        historical_data['Date'] = pd.to_datetime(historical_data['date_sold'], format='%m-%d-%Y')
+        last_date = historical_data['Date'].max()
+
+        #Check the next 12 months to look for future date
+        future_date_found = False
+        for i in range(1, 13):
+            future_date = (last_date + pd.DateOffset(months=i)).strftime('%Y-%m')
+            if future_date in report_html:
+                future_date_found = True
+                break
+
+        self.assertTrue(future_date_found, "Future dates not found in the chart.")
+
 
 if __name__ == '__main__':
     unittest.main()

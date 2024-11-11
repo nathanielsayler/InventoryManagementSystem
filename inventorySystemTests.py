@@ -206,6 +206,9 @@ class Test_ST7(unittest.TestCase):
             website = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="website"]')))
             website.send_keys('Amazon')
 
+            listing_price = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="unit_price"]')))
+            listing_price.send_keys('10.50')
+
             url = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="listing_url"]')))
             url.send_keys('About:Blank')
 
@@ -287,6 +290,148 @@ class Test_ST7(unittest.TestCase):
             # Close the browser
             driver.quit()
 
+
+class Test_ST8(unittest.TestCase):
+
+    def test_profit_report_st8(self):
+        try:
+            #Opening the webpage
+            driver = webdriver.Edge(options=edgeOptions)
+            driver.get("http://192.168.86.23:3839/")  # Navigate to the Web App
+            time.sleep(1)
+
+            # Clicking the Profit Report link
+            profit_report_xpath = '/html/body/main/div/div[1]/div[2]/ul/li/a[1]'
+            profit_report_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, profit_report_xpath)))
+            profit_report_link.click()
+            time.sleep(1)
+
+            # Setting the Item dropdown to SARIMA_Demo_Item
+            item_dropdown_xpath = '//*[@id="item_id"]'
+            item_dropdown = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, item_dropdown_xpath)))
+            item_dropdown.send_keys('SARIMA_Demo_Item')
+
+            # Pressing the submit button
+            submit_button_xpath = '//*[@id="submit"]'
+            submit_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, submit_button_xpath)))
+            submit_button.click()
+
+            #Verifying chart titles
+            title_elements = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.gtitle')))
+            self.assertEqual(title_elements[0].text, "Monthly Profit")
+            self.assertEqual(title_elements[1].text, "Monthly Margin")
+
+            #Verifying y-axis titles
+            yaxis_titles = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.ytitle')))
+            self.assertEqual(yaxis_titles[0].text, "Profit ($)")
+            self.assertEqual(yaxis_titles[1].text, "Margin (%)")
+
+            #Verifying x-axis titles
+            xaxis_titles = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.xtitle')))
+            self.assertEqual(xaxis_titles[0].text, "Month")
+            self.assertEqual(xaxis_titles[1].text, "Month")
+
+            time.sleep(1)
+
+
+        finally:
+            # Close the browser
+            driver.quit()
+
+
+class Test_ST9(unittest.TestCase):
+
+    def test_profit_report_st9(self):
+        try:
+            #Opening the webpage
+            driver = webdriver.Edge(options=edgeOptions)
+            driver.get("http://192.168.86.23:3839/")  # Navigate to the Web App
+            time.sleep(1)
+
+            # Clicking the Profit Report link
+            profit_report_xpath = '/html/body/main/div/div[1]/div[2]/ul/li/a[2]'
+            profit_report_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, profit_report_xpath)))
+            profit_report_link.click()
+            time.sleep(1)
+
+            # Setting the Item dropdown to Inventory History Item
+            item_dropdown_xpath = '//*[@id="item_id"]'
+            item_dropdown = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, item_dropdown_xpath)))
+            item_dropdown.send_keys('Inventory History Item')
+
+            # Pressing the submit button
+            submit_button_xpath = '//*[@id="submit"]'
+            submit_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, submit_button_xpath)))
+            submit_button.click()
+
+            title_elements = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.gtitle')))
+            self.assertEqual(title_elements[0].text, "Monthly Inventory Levels")
+
+            yaxis_titles = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.ytitle')))
+            self.assertEqual(yaxis_titles[0].text, "Inventory Level")
+
+            xaxis_titles = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.xtitle')))
+            self.assertEqual(xaxis_titles[0].text, "Month")
+
+            time.sleep(1)
+
+
+        finally:
+            # Close the browser
+            driver.quit()
+
+
+class Test_ST10(unittest.TestCase):
+
+    def test_profit_report_st8(self):
+        try:
+            #Opening the webpage
+            driver = webdriver.Edge(options=edgeOptions)
+            driver.get("http://192.168.86.23:3839/")  # Navigate to the Web App
+            time.sleep(1)
+
+            # Clicking the Sales Forecast link
+            profit_report_xpath = '/html/body/main/div/div[1]/div[2]/ul/li/a[3]'
+            profit_report_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, profit_report_xpath)))
+            profit_report_link.click()
+            time.sleep(1)
+
+            # Setting the Item dropdown to SARIMA_Demo_Item
+            item_dropdown_xpath = '//*[@id="item_id"]'
+            item_dropdown = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, item_dropdown_xpath)))
+            item_dropdown.send_keys('SARIMA_Demo_Item')
+
+            # Pressing the submit button
+            submit_button_xpath = '//*[@id="submit"]'
+            submit_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, submit_button_xpath)))
+            submit_button.click()
+
+            WebDriverWait(driver, 120).until(EC.url_contains("sales_forecast"))
+            time.sleep(5)
+
+            #Verifying title
+            title_elements = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.gtitle')))
+            self.assertEqual(title_elements[0].text, "Sales Forecast using SARIMA Model with Yearly Seasonality")
+
+            #Verifying y-axis title
+            yaxis_titles = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.ytitle')))
+            self.assertEqual(yaxis_titles[0].text, "Quantity Sold")
+
+            #Verifying x-axis title
+            xaxis_titles = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.xtitle')))
+            self.assertEqual(xaxis_titles[0].text, "Date")
+
+            #Verifying legend text
+            legend_text = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.legendtext')))
+            self.assertEqual(legend_text[0].text, "Observed")
+            self.assertEqual(legend_text[1].text, "Forecast")
+
+            time.sleep(1)
+
+
+        finally:
+            # Close the browser
+            driver.quit()
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

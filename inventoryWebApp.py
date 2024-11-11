@@ -13,7 +13,9 @@ import os
 from inventoryDbFunctions import get_items, add_items, delete_item, update_items
 from inventoryDbFunctions import get_inventory, add_inventory, delete_inventory, update_inventory
 from inventoryDbFunctions import get_listings, add_listing, delete_listing, update_listing
-from inventoryDbFunctions import record_sale_in_db
+from inventoryDbFunctions import record_sale_in_db, get_sales, get_inventory_history
+
+from sarimaModelPredict import create_forecast_plot_html, generate_profit_report, generate_inventory_history
 
 # This .py file contains code to run web application. Renders all .html pages through Flask, flask_wtf, and wtforms packages.
 
@@ -78,6 +80,17 @@ class ModifyListing(FlaskForm):
 class RecordSale(FlaskForm):
     quantity = StringField('Quantity Sold')
     submit = SubmitField('Save')
+
+
+class GenerateForecast(FlaskForm):
+    item_id = SelectField('Choose Item to Run Forecast Report:', choices=[])
+    submit = SubmitField('Run Report')
+
+    # Get the latest items from the items table
+    def __init__(self):
+        super(GenerateForecast, self).__init__()
+        items = get_items()
+        self.item_id.choices = [(entry['item_id'], entry['item_name']) for entry in items]
 
 
 
@@ -380,19 +393,51 @@ def record_sale():
     return render_template('record_sale.html', form=form)
 
 
+@app.route("/report_select", methods=['GET', 'POST'])
+def report_select():
+    form = GenerateForecast()
+    report_type = request.args['report']
+
+    if request.method == 'POST':
+        print(report_type)
+        if report_type == 'profit_report':
+            return redirect(url_for('profit_report', item=form.item_id.data))
+        elif report_type == 'inventory_report':
+            return redirect(url_for('inventory_report', item=form.item_id.data))
+        elif report_type == 'sales_forecast':
+            return redirect(url_for('sales_forecast', item=form.item_id.data))
+
+    return render_template('report_select.html', form=form)
+
+
 @app.route("/profit_report", methods=['GET', 'POST'])
 def profit_report():
-    return render_template('profit_report.html')
+    index = request.args['item']
+    sales_data = get_sales(int(index))
+    plot_html = generate_profit_report(sales_data)
+    return render_template('profit_report.html',  plot_html=plot_html)
 
 
 @app.route("/inventory_report", methods=['GET', 'POST'])
 def inventory_report():
-    return render_template('inventory_report.html')
+    index = request.args['item']
+
+    current_inventory = get_inventory()
+    current_inventory = [record for record in current_inventory if record['item_id'] == int(index)]
+
+    inventory_transactions = get_inventory_history()
+    inventory_transactions = [record for record in inventory_transactions if record['item_id'] == int(index)]
+
+    plot_html = generate_inventory_history(current_inventory=current_inventory, inventory_history=inventory_transactions)
+    return render_template('inventory_report.html', plot_html=plot_html)
 
 
-@app.route("/inventory_forecast", methods=['GET', 'POST'])
-def inventory_forecast():
-    return render_template('inventory_forecast.html')
+@app.route("/sales_forecast", methods=['GET', 'POST'])
+def sales_forecast():
+    index = request.args['item']
+    forecast_data = get_sales(int(index))
+    plot_html = create_forecast_plot_html(forecast_data)
+    return render_template('sales_forecast.html', plot_html=plot_html)
 
 
 

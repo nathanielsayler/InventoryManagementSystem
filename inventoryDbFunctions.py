@@ -175,6 +175,17 @@ def add_inventory(inventory_entry, db_file=None):
             cur.execute("INSERT INTO INVENTORY (quantity, item_id, location_string, unit_price) VALUES (?, ?, ?, ?)", (inventory_entry['quantity'], inventory_entry['item_id'], inventory_entry['location_string'], inventory_entry['unit_price']))
             conn.commit()
             conn.close()
+
+            new_record_id = cur.lastrowid
+
+            conn = create_connection(db_file)
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO INVENTORY_TRANSACTIONS (item_id, inventory_id, qty_change, date) VALUES (?, ?, ?, ?)", (
+                    inventory_entry['item_id'], new_record_id, inventory_entry['quantity'], datetime.today().strftime("%m-%d-%Y")))
+            conn.commit()
+            conn.close()
+
             #inserted_item = get_items(cur.lastrowid)
         except Exception as e:
             #print("Error encountered when trying to insert new inventory entry into database.")
@@ -191,6 +202,31 @@ def add_inventory(inventory_entry, db_file=None):
 # Updates existing inventory entry in inventory table
 def update_inventory(inventory, db_file=None):
     updated_inventory = {}
+
+    # Record inventory transaction in transactions table
+    prior_record = get_inventory(inventory['inventory_id'])[0]
+    prior_qty = prior_record['quantity']
+    if prior_qty != inventory['quantity']:
+        qty_change = inventory['quantity'] - prior_qty
+        try:
+            conn = create_connection(db_file)
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO INVENTORY_TRANSACTIONS (item_id, inventory_id, qty_change, date) VALUES (?, ?, ?, ?)", (
+                inventory['item_id'], inventory['inventory_id'], qty_change, datetime.today().strftime("%m-%d-%Y")))
+            conn.commit()
+            conn.close()
+
+        except Exception as e:
+            conn.rollback()
+            error_message = 'Error adding record to database.'
+            print(e)
+
+        finally:
+            conn.close()
+
+
+
     try:
         conn = create_connection(db_file)
         cur = conn.cursor()
@@ -367,3 +403,66 @@ def record_sale_in_db(listing, quantity):
     print(record)
 
 
+# function to return a specific inventory entry when key is passed, else return all inventory entries
+def get_sales(item_id=0, db_file=None):
+    sales_entries = []
+    try:
+        conn = create_connection(db_file)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        if item_id == 0:
+            cur.execute("SELECT * FROM SALES")
+        else:
+            id_str = str(item_id)
+            cur.execute("SELECT * FROM SALES WHERE item_id = " + id_str)
+        rows = cur.fetchall()
+
+        # convert row objects to dictionary
+        for i in rows:
+            sale_entry = {}
+            sale_entry["sale_id"] = i["sale_id"]
+            sale_entry["item_id"] = i["item_id"]
+            sale_entry["quantity"] = i["quantity"]
+            sale_entry["sale_price"] = i["sale_price"]
+            sale_entry["acquisition_cost"] = i["acquisition_cost"]
+            sale_entry["date_sold"] = i["date_sold"]
+            sales_entries.append(sale_entry)
+
+        conn.close()
+
+    except:
+        print("Error in get_inventory function")
+
+    return sales_entries
+
+
+# function to return a specific inventory entry when key is passed, else return all inventory entries
+def get_inventory_history(inventory_id=0, db_file=None):
+    inventory_transaction_entries = []
+    try:
+        conn = create_connection(db_file)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        if inventory_id == 0:
+            cur.execute("SELECT * FROM INVENTORY_TRANSACTIONS")
+        else:
+            id_str = str(inventory_id)
+            cur.execute("SELECT * FROM INVENTORY_TRANSACTIONS WHERE inventory_id = " + id_str)
+        rows = cur.fetchall()
+
+        # convert row objects to dictionary
+        for i in rows:
+            inventory_entry = {}
+            inventory_entry["inventory_transaction_id"] = i["inventory_transaction_id"]
+            inventory_entry["item_id"] = i["item_id"]
+            inventory_entry["inventory_id"] = i["inventory_id"]
+            inventory_entry["qty_change"] = i["qty_change"]
+            inventory_entry['date'] = i["date"]
+            inventory_transaction_entries.append(inventory_entry)
+
+        conn.close()
+
+    except:
+        print("Error in get_inventory function")
+
+    return inventory_transaction_entries

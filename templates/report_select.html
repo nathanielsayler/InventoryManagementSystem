@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<body>
+  <h1> Select Item to Run Report</h1>
+  <form method ="POST" action="" enctype = "multipart/form-data">
+        {{ form.item_id.label(class="form-control-label") }}
+        {{ form.item_id(class="form-control form-control=lg") }}
+      <br>
+            <div class="form-group">
+                {{ form.submit(class="btn btn-outline-info", onclick="userFeedback()") }}
+                <script>
+                    function userFeedback() {
+                    const elem = document.getElementById("submit")
+                    elem.style.color = 'green'
+                    elem.value = 'Running...'
+                    }
+                </script>
+            </div>
+      </form>
+</body>
+{% endblock %}
