@@ -28,8 +28,34 @@ posts = [
     {
         'author': 'Nathan Sayler',
         'title': 'How to Use this Application',
-        'content': '''Instructions for using each feature will be documented here as they are developed.''',
+        'content': '''Instructions for using each link in the sidebar is shared in the links below.''',
         'date_posted': '09/15/24'
+    },
+    {
+        'author': 'Nathan Sayler',
+        'title': 'Documentation',
+        'content': '''The Documentation link re-directs the user to this page.''',
+        'date_posted': '11/24/24'
+    },
+    {
+        'author': 'Nathan Sayler',
+        'title': 'Configure New Item',
+        'content': '''This page allows the user to add items, descriptions, and images to the database.''',
+        'date_posted': '11/24/24'
+    },
+    {
+        'author': 'Nathan Sayler',
+        'title': 'Manage Items',
+        'content': '''This page allows the user to view all items that have been configured in the database. By clicking the links in the view/modify column, the user can edit existing items to change photos, item names, descriptions, or delete the entry altogether.''',
+        'date_posted': '11/24/24'
+    },
+    {
+        'author': 'Nathan Sayler',
+        'title': 'Add Inventory',
+        'content': '''This page allows the user to add inventory associated with items that have been configured.
+        
+        Each inventory entry contains an item from the items page, quantity of the item, and the location that the item is stored. The intent of this page is to associate with a physical tracking system to allow the user to keep track of all their inventory.''',
+        'date_posted': '11/24/24'
     }
 ]
 
@@ -92,6 +118,14 @@ class GenerateForecast(FlaskForm):
         items = get_items()
         self.item_id.choices = [(entry['item_id'], entry['item_name']) for entry in items]
 
+
+class ShipItem(FlaskForm):
+    item_name = StringField('Enter Name of Item')
+    item_description = TextAreaField('Enter Item Description')
+    item_photo = FileField('Upload Photo', validators=[
+        FileAllowed(['jpeg', 'png'], 'Files must be JPEG or PNG format')])
+    submit = SubmitField('Save')
+    delete_button = SubmitField('Delete')
 
 
 # Function to validate user search input. Returns True for valid input, False otherwise.
@@ -439,6 +473,11 @@ def sales_forecast():
     plot_html = create_forecast_plot_html(forecast_data)
     return render_template('sales_forecast.html', plot_html=plot_html)
 
+
+@app.route("/ship_item", methods=['GET', 'POST'])
+def ship_item():
+    form = ShipItem()
+    return render_template('ship_item.html', form=form)
 
 
 if __name__ == '__main__':
