@@ -131,3 +131,52 @@ a.article-title:hover {
     flex: 0 1 320px;
   }
 }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-family: Arial, sans-serif;
+}
+
+/* Table header styling */
+th {
+    background-color: #2C3E50;
+    color: white;
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: bold;
+}
+
+/* Table row styling */
+td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Alternate row shading */
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+/* Hover effect for rows */
+tr:hover {
+    background-color: #ddd;
+}
+
+/* Table border styling */
+table, th, td {
+    border: 1px solid #ddd;
+}
+
+/* Responsive table for small screens */
+@media screen and (max-width: 600px) {
+    table {
+        width: 100%;
+        font-size: 14px;
+    }
+    th, td {
+        padding: 8px 10px;
+    }
+}

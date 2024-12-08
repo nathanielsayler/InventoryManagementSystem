@@ -7,10 +7,14 @@ from io import BytesIO
 import pandas as pd
 from flask import url_for
 import os
+from bs4 import BeautifulSoup
+import json
 
 
 from inventoryDbFunctions import create_connection, add_items, get_items, add_inventory, get_inventory, get_listings
 from sarimaModelPredict import generate_profit_report, generate_inventory_history, create_forecast_plot_html
+from documentation_functions import get_post_list
+from FedExAPI import get_access_token, get_rates_and_transit_times, parse_rate_response, generate_shipping_label
 
 Default_Directory = pathlib.Path().absolute()
 Default_Directory = str(Default_Directory)
@@ -152,9 +156,11 @@ class TestAddInventory(unittest.TestCase):
                     item_id INTEGER NOT NULL,
                     quantity INTEGER NOT NULL,
                     location_string TEXT,
+                    unit_price REAL,
                     FOREIGN KEY (item_id) REFERENCES ITEMS (item_id)
                     );
                 ''')
+
         cls.conn.commit()
 
 
@@ -165,13 +171,13 @@ class TestAddInventory(unittest.TestCase):
     def test_add_valid_inventory(self):
         items = get_items(db_file=db_file_test)
         valid_item_id = items[0]['item_id']
-        inventory_entry = {'item_id': valid_item_id, 'quantity': 1, 'location_string':'LocationStringExample'}
+        inventory_entry = {'item_id': valid_item_id, 'quantity': 1, 'location_string': 'LocationStringExample', 'unit_price': 10.25}
         error_message = add_inventory(inventory_entry, db_file=db_file_test)
 
         self.assertEqual(error_message, '', "Empty string was not returned for error message.")
 
-        self.cur.execute("SELECT * FROM INVENTORY WHERE item_id = ? AND quantity = ? AND location_string = ?",
-                         (inventory_entry['item_id'], inventory_entry['quantity'], inventory_entry['location_string']))
+        self.cur.execute("SELECT * FROM INVENTORY WHERE item_id = ? AND quantity = ? AND location_string = ? AND unit_price = ?",
+                         (inventory_entry['item_id'], inventory_entry['quantity'], inventory_entry['location_string'], inventory_entry['unit_price']))
         result = self.cur.fetchone()
         self.assertIsNotNone(result, "A record matching the inventory entry was not returned.")
 
@@ -589,6 +595,142 @@ class TestInventoryForecastReport(unittest.TestCase):
                 break
 
         self.assertTrue(future_date_found, "Future dates not found in the chart.")
+
+
+class TestSidebarLinks(unittest.TestCase):
+
+    def test_sidebar_links_match_posts(self):
+        # Parse the HTML file to extract sidebar links
+        with open("templates/layout.html", "r", encoding="utf-8") as f:  # Replace with the actual file path
+            html_content = f.read()
+
+        # Parsing the HTML using BeautifulSoup
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        # Extracting Quick Links and Reports links
+        quick_links = [
+            link.get_text(strip=True) for link in soup.select("div.bd-sidebar .content-section:nth-of-type(1) a")
+        ]
+        reports_links = [
+            link.get_text(strip=True) for link in soup.select("div.bd-sidebar .content-section:nth-of-type(2) a")
+        ]
+
+        # Combining all sidebar links into one list
+        sidebar_links = quick_links + reports_links
+
+        # Getting the post titles from get_post_list
+        post_titles = [post["title"] for post in get_post_list()]
+
+        # Verify that every sidebar link is covered in get_post_list
+        for link in sidebar_links:
+            self.assertIn(link, post_titles, f"Sidebar link '{link}' is missing from documentation posts.")
+
+
+class TestGetShippingRates(unittest.TestCase):
+
+    def test_get_shipping_rates(self):
+
+        raw_rates = get_rates_and_transit_times(
+            access_token=get_access_token(),
+            sender_zip_code="78723",
+            recipient_zip_code="90210",
+            package_weight="1",
+            package_length="2",
+            package_width="3",
+            package_height="4"
+        )
+
+        parsed_rates = parse_rate_response(raw_rates)
+        print(parsed_rates)
+
+        self.assertTrue(len(parsed_rates) > 0)
+
+        required_fields = {'ServiceType', 'EstimatedDelivery', 'TotalNetCharge'}
+        for entry in parsed_rates:
+            self.assertTrue(required_fields.issubset(entry.keys()), f"Missing required fields in entry: {entry}")
+
+
+class TestGenerateShippingLabel(unittest.TestCase):
+
+    def test_generate_shipping_label(self):
+
+        selected_option = {
+            "ServiceType": "FIRST_OVERNIGHT",
+            "ServiceName": "FedEx First Overnight",
+            "TotalNetCharge": 156.6,
+            "SaturdayDelivery": True,
+            "EstimatedDelivery": '2024-12-07 11:00 AM'
+        }
+
+        fed_ex_access_token = get_access_token()
+
+        shipper = {
+            "address": {
+                "postalCode": "78723",
+                "countryCode": "US",
+                "stateOrProvinceCode": "TX",
+                "city": "Austin",
+                "streetLines": ["123 Example Street"],
+                "residential": False
+            },
+            "contact": {
+                "personName": "John Doe",
+                "phoneNumber": "1234567890"
+            }
+        }
+
+        recipient = {
+            "address": {
+                "postalCode": "90210",
+                "countryCode": "US",
+                "stateOrProvinceCode": "CA",
+                "city": "Los Angeles",
+                "streetLines": ["321 Example Street"],
+                "residential": True
+            },
+            "contact": {
+                "personName": "Jane Smith",
+                "phoneNumber": "0987654321"
+            }
+        }
+
+        package_details = {
+            "weight": {
+                "units": "LB",
+                "value": "1"
+            },
+            "dimensions": {
+                "length": "2",
+                "width": "3",
+                "height": "4",
+                "units": "IN"
+            }
+        }
+
+        label_file_path = "shipping_label.pdf"
+
+        response = generate_shipping_label(
+            access_token=fed_ex_access_token,
+            selected_option=selected_option,
+            shipper=shipper,
+            recipient=recipient,
+            package_details=package_details,
+            label_file_path=label_file_path
+        )
+
+        # Assert that valid response was received from the label API
+        self.assertEqual(response.status_code, 200)
+
+        ship_response = response.json()
+
+        transaction_shipment = ship_response['output']['transactionShipments'][0]
+        service_type = transaction_shipment['serviceType']
+        package_documents = transaction_shipment['pieceResponses'][0]['packageDocuments'][0]
+
+        self.assertEqual(service_type, "FIRST_OVERNIGHT", "ServiceType did not match expected 'FIRST_OVERNIGHT'")
+
+        self.assertIn("encodedLabel", package_documents, "Did not find encodedLabel key in the packageDocuments")
+
 
 
 if __name__ == '__main__':

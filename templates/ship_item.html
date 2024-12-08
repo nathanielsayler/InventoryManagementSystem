@@ -1,14 +1,137 @@
 {% extends "layout.html" %}
 {% block content %}
     <div class="content-section">
-        <form method ="POST" action="" enctype = "multipart/form-data">
+        <form method="POST" action="" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
-            <fieldset class ="form-group">
-                <legend class ="border-bottom mb-4">Ship Item Placeholder</legend>
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">Ship Item</legend>
                 <div class="form-group">
+                    {{ form.sender_zip_code.label(class="form-control-label") }}
+                    {{ form.sender_zip_code(class="form-control form-control-lg") }}
 
+                    {{ form.sender_city.label(class="form-control-label") }}
+                    {{ form.sender_city(class="form-control form-control-lg") }}
+
+                    {{ form.sender_state.label(class="form-control-label") }}
+                    {{ form.sender_state(class="form-control form-control-lg") }}
+
+                    {{ form.sender_street_address.label(class="form-control-label") }}
+                    {{ form.sender_street_address(class="form-control form-control-lg") }}
+
+                    {{ form.sender_name.label(class="form-control-label") }}
+                    {{ form.sender_name(class="form-control form-control-lg") }}
+
+                    {{ form.sender_phone.label(class="form-control-label") }}
+                    {{ form.sender_phone(class="form-control form-control-lg") }}
+                    <br>
+
+                    {{ form.recipient_zip_code.label(class="form-control-label") }}
+                    {{ form.recipient_zip_code(class="form-control form-control-lg") }}
+
+                    {{ form.recipient_city.label(class="form-control-label") }}
+                    {{ form.recipient_city(class="form-control form-control-lg") }}
+
+                    {{ form.recipient_state.label(class="form-control-label") }}
+                    {{ form.recipient_state(class="form-control form-control-lg") }}
+
+                    {{ form.recipient_street_address.label(class="form-control-label") }}
+                    {{ form.recipient_street_address(class="form-control form-control-lg") }}
+
+                    {{ form.recipient_name.label(class="form-control-label") }}
+                    {{ form.recipient_name(class="form-control form-control-lg") }}
+
+                    {{ form.recipient_phone.label(class="form-control-label") }}
+                    {{ form.recipient_phone(class="form-control form-control-lg") }}
+
+                    <br>
+                    {{ form.item_weight.label(class="form-control-label") }}
+                    {{ form.item_weight(class="form-control form-control-lg") }}
+
+                    {{ form.package_length.label(class="form-control-label") }}
+                    {{ form.package_length(class="form-control form-control-lg") }}
+
+                    {{ form.package_width.label(class="form-control-label") }}
+                    {{ form.package_width(class="form-control form-control-lg") }}
+
+                    {{ form.package_height.label(class="form-control-label") }}
+                    {{ form.package_height(class="form-control form-control-lg") }}
                 </div>
             </fieldset>
+            <div class="form-group">
+                {{ form.submit(class="btn btn-outline-info", onclick="userFeedback()") }}
+                <script>
+                    function userFeedback() {
+                        const elem = document.getElementById("submit")
+                        elem.style.color = 'green'
+                        elem.value = 'Running...'
+                        document.getElementById("flashedmessage1").remove()
+                    }
+                </script>
+            </div>
         </form>
+
+        <!-- Add a section to display the shipping options -->
+        {% if parsed_rates %}
+        <div class="mt-4">
+            <h4>Shipping Options</h4>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Service Type</th>
+                        <th>Service Name</th>
+                        <th>Total Cost (USD)</th>
+                        <th>Saturday Delivery</th>
+                        <th>Estimated Delivery</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rate in parsed_rates %}
+                    <tr>
+                        <td>{{ rate.ServiceType }}</td>
+                        <td>{{ rate.ServiceName }}</td>
+                        <td>{{ rate.TotalNetCharge }}</td>
+                        <td>{{ 'Yes' if rate.SaturdayDelivery else 'No' }}</td>
+                        <td>{{ rate.EstimatedDelivery }}</td>
+                         <td>
+                            <form method="POST" action="{{ url_for('print_label') }}">
+                                    <!-- Sender information -->
+                                    <input type="hidden" name="sender_zip_code" value="{{ form.sender_zip_code.data }}">
+                                    <input type="hidden" name="sender_city" value="{{ form.sender_city.data }}">
+                                    <input type="hidden" name="sender_state" value="{{ form.sender_state.data }}">
+                                    <input type="hidden" name="sender_street_address" value="{{ form.sender_street_address.data }}">
+                                    <input type="hidden" name="sender_name" value="{{ form.sender_name.data }}">
+                                    <input type="hidden" name="sender_phone" value="{{ form.sender_phone.data }}">
+
+                                    <!-- Recipient information -->
+                                    <input type="hidden" name="recipient_zip_code" value="{{ form.recipient_zip_code.data }}">
+                                    <input type="hidden" name="recipient_city" value="{{ form.recipient_city.data }}">
+                                    <input type="hidden" name="recipient_state" value="{{ form.recipient_state.data }}">
+                                    <input type="hidden" name="recipient_street_address" value="{{ form.recipient_street_address.data }}">
+                                    <input type="hidden" name="recipient_name" value="{{ form.recipient_name.data }}">
+                                    <input type="hidden" name="recipient_phone" value="{{ form.recipient_phone.data }}">
+
+                                    <!-- Package details -->
+                                    <input type="hidden" name="item_weight" value="{{ form.item_weight.data }}">
+                                    <input type="hidden" name="package_length" value="{{ form.package_length.data }}">
+                                    <input type="hidden" name="package_width" value="{{ form.package_width.data }}">
+                                    <input type="hidden" name="package_height" value="{{ form.package_height.data }}">
+
+                                    <!-- Shipping option data -->
+                                    <input type="hidden" name="service_type" value="{{ rate.ServiceType }}">
+                                    <input type="hidden" name="service_name" value="{{ rate.ServiceName }}">
+                                    <input type="hidden" name="total_cost" value="{{ rate.TotalNetCharge }}">
+                                    <input type="hidden" name="saturday_delivery" value="{{ rate.SaturdayDelivery }}">
+                                    <input type="hidden" name="estimated_delivery" value="{{ rate.EstimatedDelivery }}">
+
+                                <button type="submit" class="btn btn-primary">Print Label</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
     </div>
 {% endblock content %}

@@ -1,10 +1,12 @@
 import pandas as pd
-from flask import Flask, render_template, url_for, flash, redirect, request, json, send_file, send_from_directory
+from Tools.demo.mcast import sender
+from flask import Flask, render_template, url_for, flash, redirect, request, json, send_file, send_from_directory, session
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
 from werkzeug.utils import secure_filename
 from wtforms import SubmitField, StringField, TextAreaField, SelectField, DecimalField
-from wtforms.validators import DataRequired
+from wtforms.fields.numeric import IntegerField
+from wtforms.validators import DataRequired, Length, NumberRange
 import re
 from io import BytesIO
 from datetime import datetime
@@ -15,7 +17,11 @@ from inventoryDbFunctions import get_inventory, add_inventory, delete_inventory,
 from inventoryDbFunctions import get_listings, add_listing, delete_listing, update_listing
 from inventoryDbFunctions import record_sale_in_db, get_sales, get_inventory_history
 
+from documentation_functions import get_post_list
+
 from sarimaModelPredict import create_forecast_plot_html, generate_profit_report, generate_inventory_history
+
+from FedExAPI import get_access_token, get_rates_and_transit_times, parse_rate_response, generate_shipping_label
 
 # This .py file contains code to run web application. Renders all .html pages through Flask, flask_wtf, and wtforms packages.
 
@@ -24,40 +30,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = '472bcf297c23d31e924ec24b'
 app.config['UPLOAD_FOLDER'] = 'images/'
 
-posts = [
-    {
-        'author': 'Nathan Sayler',
-        'title': 'How to Use this Application',
-        'content': '''Instructions for using each link in the sidebar is shared in the links below.''',
-        'date_posted': '09/15/24'
-    },
-    {
-        'author': 'Nathan Sayler',
-        'title': 'Documentation',
-        'content': '''The Documentation link re-directs the user to this page.''',
-        'date_posted': '11/24/24'
-    },
-    {
-        'author': 'Nathan Sayler',
-        'title': 'Configure New Item',
-        'content': '''This page allows the user to add items, descriptions, and images to the database.''',
-        'date_posted': '11/24/24'
-    },
-    {
-        'author': 'Nathan Sayler',
-        'title': 'Manage Items',
-        'content': '''This page allows the user to view all items that have been configured in the database. By clicking the links in the view/modify column, the user can edit existing items to change photos, item names, descriptions, or delete the entry altogether.''',
-        'date_posted': '11/24/24'
-    },
-    {
-        'author': 'Nathan Sayler',
-        'title': 'Add Inventory',
-        'content': '''This page allows the user to add inventory associated with items that have been configured.
-        
-        Each inventory entry contains an item from the items page, quantity of the item, and the location that the item is stored. The intent of this page is to associate with a physical tracking system to allow the user to keep track of all their inventory.''',
-        'date_posted': '11/24/24'
-    }
-]
+posts = get_post_list()
 
 
 # Class for search page. Contains a StringField for string user input, and a submit button to search
@@ -120,13 +93,25 @@ class GenerateForecast(FlaskForm):
 
 
 class ShipItem(FlaskForm):
-    item_name = StringField('Enter Name of Item')
-    item_description = TextAreaField('Enter Item Description')
-    item_photo = FileField('Upload Photo', validators=[
-        FileAllowed(['jpeg', 'png'], 'Files must be JPEG or PNG format')])
-    submit = SubmitField('Save')
-    delete_button = SubmitField('Delete')
+    sender_zip_code = StringField('Sender Zip Code', validators=[DataRequired(), Length(min=5, max=5)])
+    sender_state = StringField('Sender State (2 Letter ID)', validators=[Length(min=2, max=2)])
+    sender_city = StringField('Sender City')
+    sender_street_address = StringField('Sender Street Address')
+    sender_name = StringField('Sender Name')
+    sender_phone = StringField('Sender Phone')
 
+    recipient_zip_code = StringField('Recipient Zip Code', validators=[DataRequired(), Length(min=5, max=5)])
+    recipient_state = StringField('Recipient State (2 Letter ID)', validators=[Length(min=2, max=2)])
+    recipient_city = StringField('Recipient City')
+    recipient_street_address = StringField('Recipient Street Address')
+    recipient_name = StringField('Recipient Name')
+    recipient_phone = StringField('Recipient Phone')
+
+    item_weight = DecimalField('Item Weight in Pounds', validators=[DataRequired(), NumberRange(min=0.1)])
+    package_length = IntegerField('Package Length in Inches', validators=[DataRequired(), NumberRange(min=1)])
+    package_width = IntegerField('Package Width in Inches', validators=[DataRequired(), NumberRange(min=1)])
+    package_height = IntegerField('Package Height in Inches', validators=[DataRequired(), NumberRange(min=1)])
+    submit = SubmitField('Get Rates')
 
 # Function to validate user search input. Returns True for valid input, False otherwise.
 def check_input(input):
@@ -477,7 +462,132 @@ def sales_forecast():
 @app.route("/ship_item", methods=['GET', 'POST'])
 def ship_item():
     form = ShipItem()
-    return render_template('ship_item.html', form=form)
+    parsed_rates = None  # Initialize to None
+
+    if request.method == "POST":  # When submitting data
+        if form.validate_on_submit():
+            sender_zip_code = form.sender_zip_code.data
+            recipient_zip_code = form.recipient_zip_code.data
+            package_weight = form.item_weight.data
+            package_length = form.package_length.data
+            package_height = form.package_height.data
+            package_width = form.package_width.data
+
+            fed_ex_access_token = get_access_token()
+
+            raw_rates = get_rates_and_transit_times(
+                access_token=fed_ex_access_token,
+                sender_zip_code=sender_zip_code,
+                recipient_zip_code=recipient_zip_code,
+                package_weight=package_weight,
+                package_length=package_length,
+                package_width=package_width,
+                package_height=package_height
+            )
+
+            parsed_rates = parse_rate_response(raw_rates)
+
+
+    return render_template('ship_item.html', form=form, parsed_rates=parsed_rates)
+
+
+@app.route("/print_label", methods=['POST'])
+def print_label():
+
+    sender_zip_code = request.form.get("sender_zip_code")
+    sender_city = request.form.get("sender_city")
+    sender_state = request.form.get("sender_state")
+    sender_street_address = request.form.get("sender_street_address")
+    sender_name = request.form.get("sender_name")
+    sender_phone = request.form.get("sender_phone")
+
+    recipient_zip_code = request.form.get("recipient_zip_code")
+    recipient_city = request.form.get("recipient_city")
+    recipient_state = request.form.get("recipient_state")
+    recipient_street_address = request.form.get("recipient_street_address")
+    recipient_name = request.form.get("recipient_name")
+    recipient_phone = request.form.get("recipient_phone")
+
+    item_weight = float(request.form.get("item_weight"))
+    package_length = int(request.form.get("package_length"))
+    package_width = int(request.form.get("package_width"))
+    package_height = int(request.form.get("package_height"))
+
+    selected_option = {
+        "ServiceType": request.form.get("service_type"),
+        "ServiceName": request.form.get("service_name"),
+        "TotalNetCharge": float(request.form.get("total_cost")),
+        "SaturdayDelivery": request.form.get("saturday_delivery") == "True",
+        "EstimatedDelivery": request.form.get("estimated_delivery")
+    }
+
+    print(str(request.form.get("sender_zip_code")))
+
+    # Use these details to call the generate_shipping_label function
+    # Ensure you have the sender, recipient, and package details ready
+    fed_ex_access_token = get_access_token()
+
+    shipper = {
+        "address": {
+            "postalCode": str(sender_zip_code),
+            "countryCode": "US",
+            "stateOrProvinceCode": str(sender_state),
+            "city": str(sender_city),
+            "streetLines": [str(sender_street_address)],
+            "residential": False
+        },
+        "contact": {
+            "personName": str(sender_name),
+            "phoneNumber": str(sender_phone)
+        }
+    }
+
+    recipient = {
+        "address": {
+            "postalCode": str(recipient_zip_code),
+            "countryCode": "US",
+            "stateOrProvinceCode": str(recipient_state),
+            "city": str(recipient_city),
+            "streetLines": [str(recipient_street_address)],
+            "residential": True
+        },
+        "contact": {
+            "personName": str(recipient_name),
+            "phoneNumber": str(recipient_phone)
+        }
+    }
+
+    package_details = {
+        "weight": {
+            "units": "LB",
+            "value": str(item_weight)
+        },
+        "dimensions": {
+            "length": str(package_length),
+            "width": str(package_width),
+            "height": str(package_height),
+            "units": "IN"
+        }
+    }
+
+    label_file_path = "shipping_label.pdf"
+
+    try:
+        confirmation = generate_shipping_label(
+            access_token=fed_ex_access_token,
+            selected_option=selected_option,
+            shipper=shipper,
+            recipient=recipient,
+            package_details=package_details,
+            label_file_path=label_file_path
+        )
+
+        # Return the generated label as a downloadable file
+        return send_file(label_file_path, as_attachment=True)
+
+    except Exception as e:
+        return f"An error occurred while generating the label: {str(e)}"
+
 
 
 if __name__ == '__main__':
