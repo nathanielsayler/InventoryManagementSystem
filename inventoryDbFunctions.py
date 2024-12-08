@@ -154,9 +154,11 @@ def add_inventory(inventory_entry, db_file=None):
     conn = create_connection(db_file)
     error_message = ''
     inventory = get_inventory()
-    filtered_inventory = [entry for entry in inventory if entry.get('location_string') == inventory_entry['location_string']]
-    filtered_inventory = [entry for entry in filtered_inventory if entry.get('item_id') == inventory_entry['item_id']]
-    print(filtered_inventory)
+    if len(inventory) > 0 and 'location_string' in inventory_entry:
+        filtered_inventory = [entry for entry in inventory if entry.get('location_string') == inventory_entry['location_string']]
+        filtered_inventory = [entry for entry in filtered_inventory if entry.get('item_id') == inventory_entry['item_id']]
+    else:
+        filtered_inventory = []
 
     # Logic for "netting". If inventory entry exists, add the new entry to that and recalculate avg cost
     if len(filtered_inventory) > 0:

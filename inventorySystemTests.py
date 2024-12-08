@@ -1,6 +1,7 @@
 from fileinput import filename
 from os.path import basename
 
+from numpy.ma.testutils import assert_equal
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -14,6 +15,7 @@ import unittest
 import hashlib
 import requests
 from inventoryDbFunctions import get_listings, get_items
+from bs4 import BeautifulSoup
 
 from inventoryUnitTests import Default_Directory
 download_location = Default_Directory+"\\selenium_downloads"
@@ -47,10 +49,10 @@ class Test_ST5(unittest.TestCase):
             driver.get("http://192.168.86.23:3839/")  # Navigate to the Web App
             time.sleep(1)
 
-            # Clicking the Manage Items link
-            manage_items_xpath = '/html/body/main/div/div[1]/div/ul/li/a[4]'
-            manage_items_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, manage_items_xpath)))
-            manage_items_link.click()
+            # Clicking the Manage Inventory link
+            manage_inventory_xpath = '/html/body/main/div/div[1]/div[1]/ul/li/a[5]'
+            manage_inventory_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, manage_inventory_xpath)))
+            manage_inventory_link.click()
             time.sleep(1)
 
             # Clicking the download to CSV button
@@ -97,7 +99,7 @@ class Test_ST6(unittest.TestCase):
             time.sleep(1)
 
             # Clicking the Configure New Item link
-            manage_items_xpath = '/html/body/main/div/div[1]/div/ul/li/a[1]'
+            manage_items_xpath = '/html/body/main/div/div[1]/div[1]/ul/li/a[2]'
             manage_items_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, manage_items_xpath)))
             manage_items_link.click()
             time.sleep(1)
@@ -170,9 +172,9 @@ class Test_ST7(unittest.TestCase):
             time.sleep(1)
 
             # Clicking the Configure New Item link
-            manage_items_xpath = '/html/body/main/div/div[1]/div/ul/li/a[1]'
-            manage_items_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, manage_items_xpath)))
-            manage_items_link.click()
+            configure_item_xpath = '/html/body/main/div/div[1]/div[1]/ul/li/a[2]'
+            configure_item_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, configure_item_xpath)))
+            configure_item_link.click()
             time.sleep(1)
 
             # Filling out form fields
@@ -186,15 +188,8 @@ class Test_ST7(unittest.TestCase):
             time.sleep(1)
             save_button.click()
 
-            # Clicking the Configure New Item link
-            manage_items_xpath = '/html/body/main/div/div[1]/div/ul/li/a[1]'
-            manage_items_link = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, manage_items_xpath)))
-            manage_items_link.click()
-            time.sleep(1)
-
             # Clicking the Create Listing Link
-            create_listing_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/main/div/div[1]/div/ul/li/a[5]')))
+            create_listing_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/main/div/div[1]/div[1]/ul/li/a[6]')))
             create_listing_link.click()
 
             item_name = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="item_id"]')))
@@ -259,7 +254,7 @@ class Test_ST7(unittest.TestCase):
             time.sleep(1)
 
             #Navigating to all items to delete that record as well
-            manage_items_xpath = '/html/body/main/div/div[1]/div/ul/li/a[2]'
+            manage_items_xpath = '/html/body/main/div/div[1]/div[1]/ul/li/a[3]'
             manage_items_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, manage_items_xpath)))
             manage_items_link.click()
             time.sleep(1)
@@ -341,17 +336,17 @@ class Test_ST8(unittest.TestCase):
 
 class Test_ST9(unittest.TestCase):
 
-    def test_profit_report_st9(self):
+    def test_inventory_report_st9(self):
         try:
             #Opening the webpage
             driver = webdriver.Edge(options=edgeOptions)
             driver.get("http://192.168.86.23:3839/")  # Navigate to the Web App
             time.sleep(1)
 
-            # Clicking the Profit Report link
-            profit_report_xpath = '/html/body/main/div/div[1]/div[2]/ul/li/a[2]'
-            profit_report_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, profit_report_xpath)))
-            profit_report_link.click()
+            # Clicking the Inventory Report link
+            inventory_report_xpath = '/html/body/main/div/div[1]/div[2]/ul/li/a[2]'
+            inventory_report_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, inventory_report_xpath)))
+            inventory_report_link.click()
             time.sleep(1)
 
             # Setting the Item dropdown to Inventory History Item
@@ -383,7 +378,7 @@ class Test_ST9(unittest.TestCase):
 
 class Test_ST10(unittest.TestCase):
 
-    def test_profit_report_st8(self):
+    def test_sales_prediction_st10(self):
         try:
             #Opening the webpage
             driver = webdriver.Edge(options=edgeOptions)
@@ -431,6 +426,176 @@ class Test_ST10(unittest.TestCase):
 
         finally:
             # Close the browser
+            driver.quit()
+
+
+class Test_ST11(unittest.TestCase):
+
+    def test_documentation_page_st11(self):
+        try:
+
+            # Opening the webpage
+            driver = webdriver.Edge(options=edgeOptions)
+            driver.get("http://192.168.86.23:3839/")  # Navigate to the Web App
+            time.sleep(1)
+
+
+            # Finding all sidebar links
+            sidebar_links = WebDriverWait(driver, 10).until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".bd-sidebar a.list-group-item-light"))
+            )
+
+            # Extracting names of links in the sidebar
+            link_text_entries = []
+            for link in sidebar_links:
+                text = link.text.strip()
+                if text:  # Make sure we have non-empty text
+                    link_text_entries.append(text)
+
+            print(link_text_entries)
+
+            # Getting titles of posts on the page
+            WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "article.media")))
+
+            # 4. Extract titles from the documentation posts
+            # The titles are inside: <h2><a class="article-title" href="#">{{ post.title }}</a></h2>
+            doc_titles_elements = driver.find_elements(By.CSS_SELECTOR, "h2 a.article-title")
+            doc_titles = [title_el.text.strip() for title_el in doc_titles_elements]
+
+            print(doc_titles)
+
+            # 5. Verify that every sidebar link is documented
+            missing_docs = [text for text in link_text_entries if text not in doc_titles]
+
+            assert_equal(missing_docs, [])
+
+            if missing_docs:
+                raise AssertionError(f"Missing documentation for these links: {missing_docs}")
+            else:
+                print("All sidebar links have corresponding documentation posts.")
+
+            time.sleep(1)
+
+        finally:
+            driver.quit()
+
+
+class Test_ST12(unittest.TestCase):
+
+    def test_ship_item_rates_st12(self):
+        try:
+
+            # Opening the webpage
+            driver = webdriver.Edge(options=edgeOptions)
+            driver.get("http://192.168.86.23:3839/")  # Navigate to the Web App
+            time.sleep(1)
+
+            # Clicking the Ship Item link
+            profit_report_xpath = '/html/body/main/div/div[1]/div[1]/ul/li/a[8]'
+            profit_report_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, profit_report_xpath)))
+            profit_report_link.click()
+            time.sleep(1)
+
+            # Filling out all fields in the form
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_zip_code"]'))).send_keys('78723')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_city"]'))).send_keys('Austin')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_state"]'))).send_keys('TX')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_street_address"]'))).send_keys('123 Example Street')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_name"]'))).send_keys('John Doe')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_phone"]'))).send_keys('1234567890')
+
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_zip_code"]'))).send_keys('90210')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_city"]'))).send_keys('Los Angeles')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_state"]'))).send_keys('CA')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_street_address"]'))).send_keys('321 Example Street')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_name"]'))).send_keys('Jane Smith')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_phone"]'))).send_keys('09876654321')
+
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="item_weight"]'))).send_keys('3')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="package_length"]'))).send_keys('4')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="package_width"]'))).send_keys('5')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="package_height"]'))).send_keys('6')
+
+            submit_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="submit"]')))
+            submit_button.click()
+
+            time.sleep(1)
+
+            # Wait up to 10 seconds for the table to appear
+            table_headers = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.XPATH, '//table//th')))
+
+            header_texts = [header.text.strip() for header in table_headers]
+
+            # Asserting that each of the expected columns is present in the table that is generated
+            expected_columns = ["Service Name", "Total Cost (USD)", "Estimated Delivery"]
+            for column in expected_columns:
+                # Using unittest style assertion
+                print(column, header_texts)
+                self.assertIn(column, header_texts, f"Column '{column}' not found in table headers {header_texts}")
+
+            time.sleep(1)
+
+        finally:
+            driver.quit()
+
+
+class Test_ST13(unittest.TestCase):
+
+    def test_ship_item_label_st13(self):
+        try:
+            clear_downloads()
+            # Opening the webpage
+            driver = webdriver.Edge(options=edgeOptions)
+            driver.get("http://192.168.86.23:3839/")  # Navigate to the Web App
+            time.sleep(1)
+
+            # Clicking the Ship Item link
+            profit_report_xpath = '/html/body/main/div/div[1]/div[1]/ul/li/a[8]'
+            profit_report_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, profit_report_xpath)))
+            profit_report_link.click()
+            time.sleep(1)
+
+            # Filling out all fields in the form
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_zip_code"]'))).send_keys('78723')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_city"]'))).send_keys('Austin')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_state"]'))).send_keys('TX')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_street_address"]'))).send_keys('123 Example Street')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_name"]'))).send_keys('John Doe')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="sender_phone"]'))).send_keys('1234567890')
+
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_zip_code"]'))).send_keys('90210')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_city"]'))).send_keys('Los Angeles')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_state"]'))).send_keys('CA')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_street_address"]'))).send_keys('321 Example Street')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_name"]'))).send_keys('Jane Smith')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="recipient_phone"]'))).send_keys('0987654321')
+
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="item_weight"]'))).send_keys('3')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="package_length"]'))).send_keys('4')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="package_width"]'))).send_keys('5')
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="package_height"]'))).send_keys('6')
+
+            submit_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="submit"]')))
+            submit_button.click()
+
+            time.sleep(3)
+
+            # Wait up to 10 seconds for the table to appear, then clicking the first link
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/main/div/div[2]/div/div/table/tbody/tr[1]/td[6]/form/button'))).click()
+
+            time.sleep(10)  # Allow file to download before closing window
+
+            # Getting results into a DataFrame. Code below supports multiple download files, though unnecessary in this case
+            filenames = glob.glob(download_location + "\*.pdf")
+            actual_filename = os.path.basename(filenames[0])
+
+            # Verifying exactly 1 file was downloaded
+            self.assertEqual(len(filenames), 1, "Exactly 1 file should be downloaded")
+
+            # Verifying that the filename is in expected format
+            self.assertEqual(actual_filename, 'shipping_label.pdf')
+
+        finally:
             driver.quit()
 
 if __name__ == "__main__":
