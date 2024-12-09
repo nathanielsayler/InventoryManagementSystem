@@ -418,7 +418,7 @@ def report_select():
     report_type = request.args['report']
 
     if request.method == 'POST':
-        print(report_type)
+        # print(report_type)
         if report_type == 'profit_report':
             return redirect(url_for('profit_report', item=form.item_id.data))
         elif report_type == 'inventory_report':
@@ -521,7 +521,7 @@ def print_label():
         "EstimatedDelivery": request.form.get("estimated_delivery")
     }
 
-    print(str(request.form.get("sender_zip_code")))
+    # print(str(request.form.get("sender_zip_code")))
 
     # Use these details to call the generate_shipping_label function
     # Ensure you have the sender, recipient, and package details ready

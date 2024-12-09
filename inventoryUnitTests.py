@@ -535,6 +535,7 @@ class TestProfitReport(unittest.TestCase):
         self.assertIn('"y":[25.0,60.0,33.33333333333333],"type":"scatter"', report_html, "Missing margin value(s).")
 
 
+# Testing generation of Inventory History Report
 class TestInventoryHistoryReport(unittest.TestCase):
 
     def test_generate_inventory_history(self):
@@ -560,7 +561,8 @@ class TestInventoryHistoryReport(unittest.TestCase):
         self.assertIn('"y":[123456523,123456528,123456518],"type":"bar"}],', report_html,"Inventory values did not match expected output")
 
 
-class TestInventoryForecastReport(unittest.TestCase):
+# Testing generation of Sales Forecast Report
+class TestSalesForecastReport(unittest.TestCase):
 
     def test_create_forecast_plot_html(self):
         #Load synthetic data from CSV file
@@ -597,6 +599,7 @@ class TestInventoryForecastReport(unittest.TestCase):
         self.assertTrue(future_date_found, "Future dates not found in the chart.")
 
 
+# Testing documentation page to ensure all links in the sidebar are explained
 class TestSidebarLinks(unittest.TestCase):
 
     def test_sidebar_links_match_posts(self):
@@ -626,6 +629,7 @@ class TestSidebarLinks(unittest.TestCase):
             self.assertIn(link, post_titles, f"Sidebar link '{link}' is missing from documentation posts.")
 
 
+# Testing API function to retrieve rates and timelines
 class TestGetShippingRates(unittest.TestCase):
 
     def test_get_shipping_rates(self):
@@ -641,7 +645,7 @@ class TestGetShippingRates(unittest.TestCase):
         )
 
         parsed_rates = parse_rate_response(raw_rates)
-        print(parsed_rates)
+        # print(parsed_rates)
 
         self.assertTrue(len(parsed_rates) > 0)
 
@@ -650,6 +654,7 @@ class TestGetShippingRates(unittest.TestCase):
             self.assertTrue(required_fields.issubset(entry.keys()), f"Missing required fields in entry: {entry}")
 
 
+# Testing the label generation API interaction
 class TestGenerateShippingLabel(unittest.TestCase):
 
     def test_generate_shipping_label(self):
