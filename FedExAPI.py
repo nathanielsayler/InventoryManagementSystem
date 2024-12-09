@@ -128,7 +128,7 @@ def parse_rate_response(response):
 
 def generate_shipping_label(access_token, selected_option, shipper, recipient, package_details, label_file_path):
     # Generate and save a shipping label using the FedEx Ship API.
-    print(selected_option)
+    # print(selected_option)
     headers = {
         "content-type": "application/json",
         "authorization": f"Bearer {access_token}",
@@ -175,7 +175,7 @@ def generate_shipping_label(access_token, selected_option, shipper, recipient, p
     response.raise_for_status()
 
     ship_response = response.json()
-    print("Ship Response:", json.dumps(ship_response, indent=4))  # Debugging statement
+    # print("Ship Response:", json.dumps(ship_response, indent=4))  # Debugging statement
 
     if "output" in ship_response and "transactionShipments" in ship_response["output"]:
         transaction = ship_response["output"]["transactionShipments"][0]
